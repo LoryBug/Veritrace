@@ -1,0 +1,43 @@
+# Jason / Java build artifacts
+bin/
+build/
+target/
+.gradle/
+*.class
+*.jar
+
+# Node / web app artifacts
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Python / DSPy artifacts
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Local IDE files
+.idea/
+.vscode/
+.lsai/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Optional local outputs
+output/traces/*.json
+output/traces/*.log
+output/plans/*.json
+output/events/*.jsonl
+output/dspy/*.json
+output/*.log
+
+# Local environment files
+.env
+.env.*
+!.env.example
