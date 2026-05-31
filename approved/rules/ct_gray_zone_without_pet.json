@@ -1,0 +1,43 @@
+{
+  "ruleId": "ct_gray_zone_without_pet",
+  "domain": "cardiac_mass",
+  "title": "Cardiac CT gray zone without PET parameters",
+  "ruleType": "missing_data_escalation",
+  "reviewStatus": "approved",
+  "approvedForRuntime": true,
+  "reviewedBy": "project_reviewer",
+  "reviewDate": "2026-06-01",
+  "source": {
+    "sourceId": "dangelo_2020_ct_pet",
+    "type": "paper",
+    "status": "curated",
+    "quote": "Cardiac CT suspicious signs and 18F-FDG PET/CT thresholds support CT/PET pathway interpretation."
+  },
+  "conditions": [
+    "ct_level(Case, gray_zone)",
+    "unavailable(Case, pet)"
+  ],
+  "conclusions": [
+    "risk(Case, mid)",
+    "decision(Case, cardiac_ct_gray_zone)",
+    "activated_rule(Case, ct_gray_zone_without_pet)",
+    "requires_human_review(Case, missing_pet_parameters)"
+  ],
+  "usedEvidence": [
+    "ct_level(Case, gray_zone)",
+    "unavailable(Case, pet)"
+  ],
+  "missingDataBehavior": "require_human_review",
+  "runtimeImplementation": {
+    "agentFile": "agents/case_reasoner.asl",
+    "activatedRuleFact": "activated_rule(Case, ct_gray_zone_without_pet)",
+    "sourceMappingFact": "source_for_rule(ct_gray_zone_without_pet, dangelo_2020_ct_pet)"
+  },
+  "validatedBy": [
+    "expected/traces/gc_gray_zone.expected.json"
+  ],
+  "limitations": [
+    "This rule models uncertainty escalation and missing PET parameters, not a final diagnosis.",
+    "The rule should trigger additional data collection or review instead of treating missing PET data as negative evidence."
+  ]
+}
