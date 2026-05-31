@@ -1,0 +1,39 @@
+{
+  "ruleId": "critical_data_missing",
+  "domain": "cardiac_mass",
+  "title": "Critical case data missing",
+  "ruleType": "safety_guard",
+  "reviewStatus": "approved",
+  "approvedForRuntime": true,
+  "reviewedBy": "project_reviewer",
+  "reviewDate": "2026-06-01",
+  "source": {
+    "sourceId": "local_safety_behavior",
+    "type": "safety_policy",
+    "status": "curated",
+    "quote": "If no usable modality data are available, the runtime must mark the case as insufficient data rather than low risk."
+  },
+  "conditions": [
+    "not usable_case_data(Case)"
+  ],
+  "conclusions": [
+    "risk(Case, unknown)",
+    "decision(Case, insufficient_data)",
+    "activated_rule(Case, critical_data_missing)",
+    "requires_human_review(Case, missing_critical_data)"
+  ],
+  "usedEvidence": [],
+  "missingDataBehavior": "require_human_review",
+  "runtimeImplementation": {
+    "agentFile": "agents/case_reasoner.asl",
+    "activatedRuleFact": "activated_rule(Case, critical_data_missing)",
+    "sourceMappingFact": "source_for_rule(critical_data_missing, local_safety_behavior)"
+  },
+  "validatedBy": [
+    "expected/traces/gc00.expected.json"
+  ],
+  "limitations": [
+    "This is a framework safety behavior, not a clinical conclusion.",
+    "The rule prevents missing data from being interpreted as negative evidence."
+  ]
+}
