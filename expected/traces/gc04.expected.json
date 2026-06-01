@@ -1,0 +1,24 @@
+{
+  "caseId": "gc04",
+  "risk": "high",
+  "decision": "cmr_driven_high_suspicion",
+  "activatedRules": [
+    "cmr_mass_score_above_cutoff"
+  ],
+  "usedEvidence": [
+    "score(gc04, cmr_mass_score, 5)"
+  ],
+  "missingData": [
+    "echo",
+    "ct_pet",
+    "pet"
+  ],
+  "sources": [
+    "paolisso_2024_cmr_mass_score"
+  ],
+  "nextSteps": [
+    "heart_team_discussion",
+    "staging_or_histological_assessment"
+  ],
+  "humanReview": []
+}
