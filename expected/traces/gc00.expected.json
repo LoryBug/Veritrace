@@ -1,0 +1,24 @@
+{
+  "caseId": "gc00",
+  "risk": "unknown",
+  "decision": "insufficient_data",
+  "activatedRules": [
+    "critical_data_missing"
+  ],
+  "usedEvidence": [],
+  "missingData": [
+    "echo",
+    "cmr",
+    "ct_pet",
+    "pet"
+  ],
+  "sources": [
+    "local_safety_behavior"
+  ],
+  "nextSteps": [
+    "collect_minimum_required_data"
+  ],
+  "humanReview": [
+    "missing_critical_data"
+  ]
+}
