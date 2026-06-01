@@ -1,0 +1,27 @@
+{
+  "caseId": "gc_gray_zone",
+  "risk": "mid",
+  "decision": "cardiac_ct_gray_zone",
+  "activatedRules": [
+    "ct_gray_zone_without_pet"
+  ],
+  "usedEvidence": [
+    "ct_level(gc_gray_zone, gray_zone)",
+    "unavailable(gc_gray_zone, pet)"
+  ],
+  "missingData": [
+    "echo",
+    "cmr",
+    "pet"
+  ],
+  "sources": [
+    "dangelo_2020_ct_pet"
+  ],
+  "nextSteps": [
+    "perform_pet_ct",
+    "consider_cmr"
+  ],
+  "humanReview": [
+    "missing_pet_parameters"
+  ]
+}
