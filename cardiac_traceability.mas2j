@@ -1,0 +1,11 @@
+MAS cardiac_traceability {
+  infrastructure: Local
+
+  agents:
+    runtime_coordinator [verbose=2];
+    case_reasoner [verbose=2];
+    trace_guardian [verbose=2];
+    care_planner [verbose=2];
+
+  aslSourcePath: "agents";
+}
