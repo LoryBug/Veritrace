@@ -1,0 +1,43 @@
+{
+  "ruleId": "cmr_mass_score_above_cutoff",
+  "domain": "cardiac_mass",
+  "title": "CMR Mass Score above cutoff",
+  "ruleType": "threshold",
+  "reviewStatus": "approved",
+  "approvedForRuntime": true,
+  "reviewedBy": "project_reviewer",
+  "reviewDate": "2026-06-01",
+  "source": {
+    "sourceId": "paolisso_2024_cmr_mass_score",
+    "type": "paper",
+    "status": "curated",
+    "quote": "CMR Mass Score cutoff >= 5 supports malignancy suspicion in cardiac mass evaluation."
+  },
+  "conditions": [
+    "score(Case, cmr_mass_score, Score)",
+    "cutoff(cmr_mass_score, Cutoff)",
+    "Score >= Cutoff"
+  ],
+  "conclusions": [
+    "risk(Case, high)",
+    "decision(Case, cmr_driven_high_suspicion)",
+    "activated_rule(Case, cmr_mass_score_above_cutoff)"
+  ],
+  "usedEvidence": [
+    "score(Case, cmr_mass_score, Score)"
+  ],
+  "missingDataBehavior": "do_not_assume_negative",
+  "runtimeImplementation": {
+    "agentFile": "agents/cardiac_mass_agent.asl",
+    "activatedRuleFact": "activated_rule(Case, cmr_mass_score_above_cutoff)",
+    "sourceMappingFact": "source_for_rule(cmr_mass_score_above_cutoff, paolisso_2024_cmr_mass_score)"
+  },
+  "validatedBy": [
+    "expected/traces/gc04.expected.json",
+    "expected/traces/gc00.expected.json"
+  ],
+  "limitations": [
+    "This rule is part of a traceability case study, not a clinically validated decision rule.",
+    "The rule does not infer low risk when CMR Mass Score is missing."
+  ]
+}

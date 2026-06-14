@@ -1,0 +1,68 @@
+{
+  "ruleId": "cmr_mass_score_above_cutoff",
+  "domain": "cardiac_mass",
+  "title": "CMR Mass Score above cutoff",
+  "ruleType": "threshold",
+  "reviewStatus": "draft",
+  "approvedForRuntime": false,
+  "source": {
+    "sourceId": "paolisso_2024_cmr_mass_score",
+    "type": "paper",
+    "status": "curated",
+    "quote": "CMR Mass Score cutoff >= 5 supports malignancy suspicion in cardiac mass evaluation."
+  },
+  "claim": {
+    "claimId": "claim_cmr_mass_score_cutoff",
+    "claimType": "threshold",
+    "candidateMeaning": "A CMR Mass Score greater than or equal to 5 supports high suspicion in the cardiac mass workflow."
+  },
+  "conditions": [
+    "score(Case, cmr_mass_score, Score)",
+    "cutoff(cmr_mass_score, Cutoff)",
+    "Score >= Cutoff"
+  ],
+  "conclusions": [
+    "risk(Case, high)",
+    "decision(Case, cmr_driven_high_suspicion)",
+    "activated_rule(Case, cmr_mass_score_above_cutoff)"
+  ],
+  "usedEvidence": [
+    "score(Case, cmr_mass_score, Score)"
+  ],
+  "missingDataBehavior": "do_not_assume_negative",
+  "runtimeSourceMapping": {
+    "ruleId": "cmr_mass_score_above_cutoff",
+    "sourceId": "paolisso_2024_cmr_mass_score"
+  },
+  "humanReview": {
+    "required": true,
+    "reviewedBy": null,
+    "reviewNotes": []
+  },
+  "expectedTests": [
+    {
+      "name": "positive_score_at_cutoff",
+      "caseId": "gc04",
+      "inputFacts": [
+        "score(gc04, cmr_mass_score, 5)",
+        "cutoff(cmr_mass_score, 5)"
+      ],
+      "expectedTraceFacts": [
+        "risk(gc04, high)",
+        "decision(gc04, cmr_driven_high_suspicion)",
+        "activated_rule(gc04, cmr_mass_score_above_cutoff)"
+      ]
+    },
+    {
+      "name": "missing_score_does_not_fire_rule",
+      "caseId": "gc00",
+      "inputFacts": [
+        "unavailable(gc00, cmr)"
+      ],
+      "expectedTraceFacts": [
+        "decision(gc00, insufficient_data)",
+        "requires_human_review(gc00, missing_critical_data)"
+      ]
+    }
+  ]
+}
