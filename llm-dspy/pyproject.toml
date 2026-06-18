@@ -1,0 +1,22 @@
+[project]
+name = "traceability-agent-dspy"
+version = "0.1.0"
+description = "Optional DSPy harness for traceability-agent LLM prompt evaluation and optimization"
+requires-python = ">=3.10"
+dependencies = [
+  "dspy-ai>=2.6.0",
+  "python-dotenv>=1.0.1",
+]
+
+[project.scripts]
+trace-dspy-eval = "traceability_dspy.evaluate:main"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
