@@ -13,7 +13,9 @@
     "validate:compilation": "node tools/mas/validate-compilation.mjs",
 
     "lint:ast-grep": "npx --yes -p \"@ast-grep/cli\" sg scan",
+    "test:validate": "node --test tools/mas/rule-validation.test.mjs",
     "test:compile": "node --test tools/mas/compile-rules.test.mjs",
+    "test": "npm run test:validate && npm run test:compile",
     "test:mas": "powershell -ExecutionPolicy Bypass -File tools/mas/test-all-cases.ps1"
   }
 }

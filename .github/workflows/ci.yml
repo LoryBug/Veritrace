@@ -42,6 +42,9 @@ jobs:
       - name: Validate approved rule JSON
         run: node tools/mas/validate-approved-rules.mjs
 
+      - name: Test rule validation library
+        run: node --test tools/mas/rule-validation.test.mjs
+
       - name: Test MAS rule compiler
         run: node --test tools/mas/compile-rules.test.mjs
 
