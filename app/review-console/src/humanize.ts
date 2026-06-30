@@ -1,3 +1,5 @@
+import { explainFragment } from './predicate-vocabulary'
+
 const modalityLabels: Record<string, string> = {
   echo: 'echocardiography',
   cmr: 'cardiac magnetic resonance',
@@ -48,46 +50,7 @@ const reviewLabels: Record<string, string> = {
 }
 
 export function humanizeFact(fact: string) {
-  const normalized = fact.trim()
-
-  const score = normalized.match(/^score\(([^,]+),\s*([^,]+),\s*([^\)]+)\)$/)
-  if (score) {
-    const [, caseId, metric, value] = score
-    return `${labelMetric(metric)} is available for ${caseId} with value ${value}.`
-  }
-
-  const cutoff = normalized.match(/^cutoff\(([^,]+),\s*([^\)]+)\)$/)
-  if (cutoff) {
-    const [, metric, value] = cutoff
-    return `${labelMetric(metric)} has an approved cutoff of ${value}.`
-  }
-
-  const risk = normalized.match(/^risk\([^,]+,\s*([^\)]+)\)$/)
-  if (risk) return riskLabels[risk[1]] || `Risk is set to ${risk[1]}.`
-
-  const decision = normalized.match(/^decision\([^,]+,\s*([^\)]+)\)$/)
-  if (decision) return decisionLabels[decision[1]] || `Decision is set to ${decision[1]}.`
-
-  const activatedRule = normalized.match(/^activated_rule\([^,]+,\s*([^\)]+)\)$/)
-  if (activatedRule) return ruleLabels[activatedRule[1]] || `Rule ${activatedRule[1]} is activated.`
-
-  const unavailable = normalized.match(/^unavailable\(([^,]+),\s*([^\)]+)\)$/)
-  if (unavailable) {
-    const [, caseId, modality] = unavailable
-    return `${labelModality(modality)} is missing for ${caseId}.`
-  }
-
-  const ctLevel = normalized.match(/^ct_level\(([^,]+),\s*([^\)]+)\)$/)
-  if (ctLevel) {
-    const [, caseId, level] = ctLevel
-    return `Cardiac CT level for ${caseId} is ${level.replace(/_/g, ' ')}.`
-  }
-
-  if (normalized === 'Score >= Cutoff') {
-    return 'The observed score reaches or exceeds the approved cutoff.'
-  }
-
-  return normalized
+  return explainFragment(fact).summary
 }
 
 export function humanizeRuleId(ruleId: string) {
@@ -117,15 +80,6 @@ export function humanizeMissingDataBehavior(value: string) {
     return 'This rule does not define special missing-data behavior.'
   }
   return value
-}
-
-function labelMetric(metric: string) {
-  return metric
-    .replace('cmr_mass_score', 'CMR Mass Score')
-    .replace('dem_score', 'DEM Score')
-    .replace('suv_max', 'SUV max')
-    .replace('mtv', 'metabolic tumor volume')
-    .replace('tlg', 'total lesion glycolysis')
 }
 
 function labelModality(value: string) {
