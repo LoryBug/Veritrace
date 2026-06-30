@@ -139,7 +139,7 @@ For LLM-backed review-console calls, provide provider settings through your shel
 ```text
 LLM_PROVIDER=groq
 LLM_API_KEY=your-provider-key
-LLM_MODEL=llama-3.3-70b-versatile
+LLM_MODEL=qwen/qwen3.6-27b
 ```
 
 ## DSPy Harness

@@ -12,7 +12,7 @@ def configure_dspy() -> None:
     load_dotenv(project_root / "llm-dspy" / ".env")
     load_dotenv(project_root / "app" / "review-console" / ".env")
     load_dotenv()
-    model = os.getenv("DSPY_MODEL", "groq/llama-3.3-70b-versatile")
+    model = os.getenv("DSPY_MODEL", "groq/qwen/qwen3.6-27b")
 
     # DSPy uses LiteLLM model names for non-OpenAI providers.
     lm = dspy.LM(model, temperature=0.0, max_tokens=2000)

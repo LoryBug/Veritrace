@@ -40,7 +40,7 @@ pip install -e .
 Create `.env`:
 
 ```text
-DSPY_MODEL=groq/llama-3.3-70b-versatile
+DSPY_MODEL=groq/qwen/qwen3.6-27b
 GROQ_API_KEY=your-key
 ```
 

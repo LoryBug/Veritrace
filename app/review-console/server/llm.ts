@@ -18,7 +18,7 @@ export function getLlmConfig(): LlmConfig {
   return {
     provider,
     apiKey: process.env.LLM_API_KEY,
-    model: process.env.LLM_MODEL || (provider === 'groq' ? 'llama-3.3-70b-versatile' : 'openai/gpt-4o-mini'),
+    model: process.env.LLM_MODEL || (provider === 'groq' ? 'qwen/qwen3.6-27b' : 'openai/gpt-4o-mini'),
   }
 }
 

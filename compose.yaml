@@ -18,7 +18,7 @@ services:
       PORT: 8787
       LLM_PROVIDER: ${LLM_PROVIDER:-groq}
       LLM_API_KEY: ${LLM_API_KEY:-}
-      LLM_MODEL: ${LLM_MODEL:-llama-3.3-70b-versatile}
+      LLM_MODEL: ${LLM_MODEL:-qwen/qwen3.6-27b}
     ports:
       - "5173:5173"
       - "8787:8787"

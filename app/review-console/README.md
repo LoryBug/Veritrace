@@ -48,7 +48,7 @@ Required `.env` values:
 ```text
 LLM_PROVIDER=groq
 LLM_API_KEY=your-provider-key
-LLM_MODEL=llama-3.3-70b-versatile
+LLM_MODEL=qwen/qwen3.6-27b
 PORT=8787
 ```
 
