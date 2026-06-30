@@ -1,0 +1,26 @@
+services:
+  tests:
+    build: .
+    command: npm test
+
+  mas:
+    build: .
+    command: npm run test:mas
+    volumes:
+      - ./output:/workspace/output
+
+  review-console:
+    build: .
+    working_dir: /workspace/app/review-console
+    command: npm run dev:docker
+    environment:
+      API_HOST: 0.0.0.0
+      PORT: 8787
+      LLM_PROVIDER: ${LLM_PROVIDER:-groq}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-llama-3.3-70b-versatile}
+    ports:
+      - "5173:5173"
+      - "8787:8787"
+    volumes:
+      - ./output:/workspace/output

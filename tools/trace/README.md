@@ -40,6 +40,15 @@ node tools/trace/parse-jason-trace.mjs tools/trace/fixtures/gc04.jason-trace.log
 node tools/trace/validate-trace.mjs expected/traces/gc04.expected.json output/traces/gc04.trace.json
 ```
 
+## Validate All Generated Traces
+
+After running the live MAS test, validate all generated case traces:
+
+```powershell
+npm run test:mas
+npm run validate:traces
+```
+
 ## Current Limitation
 
 The repository includes the CLI-first MAS scaffold in `cardiac_traceability.mas2j` and the coordinator exporter in `agents/runtime_coordinator.asl`. Local live execution still depends on having Jason installed and available in PATH. The parser and validator are already executable through Node.

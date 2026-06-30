@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
     "dev:client": "vite --host 127.0.0.1",
+    "dev:docker": "concurrently \"npm:dev:server\" \"vite --host 0.0.0.0\"",
     "dev:server": "tsx watch server/index.ts",
     "build": "tsc -b && vite build",
     "preview": "vite preview",

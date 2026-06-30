@@ -11,11 +11,13 @@
     "compile": "node tools/mas/compile-rules.mjs",
     "validate:rules": "node tools/mas/validate-approved-rules.mjs",
     "validate:compilation": "node tools/mas/validate-compilation.mjs",
+    "validate:traces": "node tools/trace/validate-all.mjs",
 
     "lint:ast-grep": "npx --yes -p \"@ast-grep/cli\" sg scan",
     "test:validate": "node --test tools/mas/rule-validation.test.mjs",
     "test:compile": "node --test tools/mas/compile-rules.test.mjs",
-    "test": "npm run test:validate && npm run test:compile",
-    "test:mas": "powershell -ExecutionPolicy Bypass -File tools/mas/test-all-cases.ps1"
+    "test:trace": "node tools/trace/parse-jason-trace.mjs tools/trace/fixtures/gc04.jason-trace.log output/traces/gc04.trace.json && node tools/trace/validate-trace.mjs expected/traces/gc04.expected.json output/traces/gc04.trace.json",
+    "test": "npm run validate:rules && npm run validate:compilation && npm run test:validate && npm run test:compile && npm run test:trace",
+    "test:mas": "node tools/mas/test-all-cases.mjs"
   }
 }

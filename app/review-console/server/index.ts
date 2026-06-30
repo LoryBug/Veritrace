@@ -16,6 +16,7 @@ dotenv.config()
 const execFileAsync = promisify(execFile)
 const repoRoot = path.resolve(process.cwd(), '../..')
 const app = express()
+const host = process.env.API_HOST || '127.0.0.1'
 const port = Number(process.env.PORT || 8787)
 
 app.use(cors({ origin: ['http://127.0.0.1:5173', 'http://localhost:5173'] }))
@@ -287,6 +288,6 @@ app.post('/api/verbalize-trace', async (request, response) => {
   }
 })
 
-app.listen(port, '127.0.0.1', () => {
-  console.log(`Review console API listening on http://127.0.0.1:${port}`)
+app.listen(port, host, () => {
+  console.log(`Review console API listening on http://${host}:${port}`)
 })

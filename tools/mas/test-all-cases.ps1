@@ -1,11 +1,43 @@
 param(
     [string]$RepoRoot = (Resolve-Path "$PSScriptRoot\..\.."),
-    [string]$JasonJar = "C:\tools\jason\bin\jason.jar",
+    [string]$JasonJar = "",
     [string]$Mas2j = "cardiac_traceability.mas2j"
 )
 
 $CoordinatorAsl = Join-Path $RepoRoot "agents\runtime_coordinator.asl"
 $LogProps = Join-Path $RepoRoot "logging.properties"
+
+function Resolve-RuntimeClasspath {
+    if ($JasonJar -and (Test-Path -LiteralPath $JasonJar)) {
+        return $JasonJar
+    }
+
+    $gradleWrapper = Join-Path $RepoRoot "gradlew.bat"
+    if (-not (Test-Path -LiteralPath $gradleWrapper)) {
+        $gradleWrapper = Join-Path $RepoRoot "gradlew"
+    }
+
+    if (-not (Test-Path -LiteralPath $gradleWrapper)) {
+        throw "Gradle wrapper not found. Pass -JasonJar <path> or add gradlew/gradlew.bat."
+    }
+
+    Push-Location $RepoRoot
+    try {
+        $classpath = & $gradleWrapper -q printRuntimeClasspath
+        if ($LASTEXITCODE -ne 0) {
+            throw "Gradle failed while resolving Jason runtime classpath."
+        }
+    } finally {
+        Pop-Location
+    }
+
+    $classpath = ($classpath | Where-Object { $_ } | Select-Object -Last 1).Trim()
+    if (-not $classpath) {
+        throw "Resolved Jason runtime classpath is empty."
+    }
+
+    return $classpath
+}
 
 $cases = @(
     @{ Name = "gc04"; ExpectedFile = "gc04.expected.json" },
@@ -142,6 +174,7 @@ function Compare-Trace {
 }
 
 $backup = Backup-Coordinator
+$runtimeClasspath = Resolve-RuntimeClasspath
 
 try {
     foreach ($case in $cases) {
@@ -156,7 +189,7 @@ try {
 
         $psi = New-Object System.Diagnostics.ProcessStartInfo
         $psi.FileName = "java"
-        $psi.Arguments = "-Djava.util.logging.config.file=$LogProps -cp $JasonJar jason.infra.local.RunLocalMAS $Mas2j"
+        $psi.Arguments = "-Djava.util.logging.config.file=`"$LogProps`" -cp `"$runtimeClasspath`" jason.infra.local.RunLocalMAS `"$Mas2j`""
         $psi.WorkingDirectory = $RepoRoot
         $psi.UseShellExecute = $false
         $psi.RedirectStandardOutput = $true

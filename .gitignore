@@ -5,12 +5,14 @@ target/
 .gradle/
 *.class
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 
 # Node / web app artifacts
 node_modules/
 dist/
 coverage/
 *.tsbuildinfo
+app/review-console/*.log
 
 # Python / DSPy artifacts
 .venv/
@@ -36,6 +38,9 @@ output/plans/*.json
 output/events/*.jsonl
 output/dspy/*.json
 output/*.log
+
+# Local documentation (not tracked — gap checklist for internal use)
+docs/
 
 # Local environment files
 .env
