@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const [, , inputPath, outputPath] = process.argv
@@ -63,6 +63,7 @@ for (const line of lines.slice(begin + 1, end)) {
   trace[key] = listKeys.has(key) ? parseJasonList(value) : value
 }
 
+await mkdir(path.dirname(outputPath), { recursive: true })
 await writeFile(outputPath, `${JSON.stringify(trace, null, 2)}\n`, 'utf8')
 console.log(`Trace written to ${path.normalize(outputPath)}`)
 
