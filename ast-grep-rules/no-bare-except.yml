@@ -1,0 +1,9 @@
+id: no-bare-except
+language: Python
+severity: error
+message: Use a specific exception type in except clauses. Bare except catches unexpected errors like SystemExit and KeyboardInterrupt.
+files:
+  - llm-dspy/**/*.py
+rule:
+  kind: module
+  regex: "except:"

@@ -1,0 +1,15 @@
+id: no-forbidden-local-paths
+language: TypeScript
+severity: error
+message: Do not hardcode local absolute filesystem paths. Use project-relative paths or config variables instead.
+files:
+  - "**/*.mjs"
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.py"
+rule:
+  kind: program
+  any:
+    - regex: "C:\\\\[A-Za-z]"
+    - regex: "/home/[^/]"
+    - regex: "/Users/[^/]"

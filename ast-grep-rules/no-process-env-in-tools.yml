@@ -1,0 +1,9 @@
+id: no-process-env-in-tools
+language: JavaScript
+severity: warning
+message: CLI tools should not read process.env directly. Accept config via CLI arguments or a config file.
+files:
+  - tools/**/*.mjs
+rule:
+  kind: program
+  regex: "process\\.env\\."

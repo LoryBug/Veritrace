@@ -36,6 +36,9 @@ jobs:
         working-directory: app/review-console
         run: npm run build
 
+      - name: Ast-grep lint
+        run: npm run lint:ast-grep
+
       - name: Validate approved rule JSON
         run: node tools/mas/validate-approved-rules.mjs
 

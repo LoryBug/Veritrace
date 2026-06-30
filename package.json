@@ -12,6 +12,7 @@
     "validate:rules": "node tools/mas/validate-approved-rules.mjs",
     "validate:compilation": "node tools/mas/validate-compilation.mjs",
 
+    "lint:ast-grep": "npx --yes -p \"@ast-grep/cli\" sg scan",
     "test:compile": "node --test tools/mas/compile-rules.test.mjs",
     "test:mas": "powershell -ExecutionPolicy Bypass -File tools/mas/test-all-cases.ps1"
   }
