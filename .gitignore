@@ -13,6 +13,8 @@ dist/
 coverage/
 *.tsbuildinfo
 app/review-console/*.log
+app/review-console/playwright-report/
+app/review-console/test-results/
 
 # Python / DSPy artifacts
 .venv/

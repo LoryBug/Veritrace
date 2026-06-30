@@ -86,6 +86,24 @@ Supported providers:
 - `groq`: preferred default for the course demo because it is fast and simple for structured extraction;
 - `openrouter`: supported fallback for model flexibility.
 
+The backend reads `LLM_API_KEY`. It also accepts provider-specific aliases: `GROQ_API_KEY` for Groq and `OPENROUTER_API_KEY` for OpenRouter.
+
+## Playwright E2E
+
+The Playwright suite starts the local backend and frontend, then performs real LLM calls for claim extraction, candidate rule drafting, and trace verbalization.
+
+```text
+npm run test:e2e
+```
+
+Before running it, configure a real key in `.env` or the shell:
+
+```text
+LLM_PROVIDER=groq
+LLM_API_KEY=your-provider-key
+LLM_MODEL=qwen/qwen3.6-27b
+```
+
 The app should also support saved/sample outputs for reproducible demos.
 
 ## Runtime Demo

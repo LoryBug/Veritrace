@@ -86,6 +86,7 @@ npm run test:mas
 | `npm run compile` | Compile approved rules to AgentSpeak |
 | `npm run lint:ast-grep` | Custom ast-grep linting rules |
 | `npm run test:mas` | Live Jason MAS E2E for `gc04`, `gc00`, `gc_gray_zone` |
+| `npm run test:e2e` | Playwright review-console E2E with real LLM calls |
 
 ## Review Console
 
@@ -141,6 +142,8 @@ LLM_PROVIDER=groq
 LLM_API_KEY=your-provider-key
 LLM_MODEL=qwen/qwen3.6-27b
 ```
+
+The Playwright E2E suite also requires a real provider key. It accepts `LLM_API_KEY`, or provider-specific aliases such as `GROQ_API_KEY` and `OPENROUTER_API_KEY`.
 
 ## DSPy Harness
 
