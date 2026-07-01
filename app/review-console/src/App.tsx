@@ -479,7 +479,21 @@ export function App() {
       setApprovedRules(approved.rules)
       await refreshAuditEvents()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to promote rule to runtime')
+      const message = err instanceof Error ? err.message : 'Unable to promote rule to runtime'
+      if (message.includes('already exists') && window.confirm(`${message}\n\nOverwrite the existing runtime artifact and recompile?`)) {
+        try {
+          const result = await promoteRuleToRuntime(rule, true)
+          setCompilationResult(result.compilation)
+          const approved = await fetchApprovedRules()
+          setApprovedRules(approved.rules)
+          await refreshAuditEvents()
+          return
+        } catch (overwriteErr) {
+          setError(overwriteErr instanceof Error ? overwriteErr.message : 'Unable to overwrite runtime rule')
+          return
+        }
+      }
+      setError(message)
     } finally {
       setIsRuntimeBusy(false)
     }

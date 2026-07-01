@@ -77,3 +77,63 @@ test('evaluates custom AgentSpeak facts with the Jason runtime', async ({ page }
 
   await expect(page.locator('.audit-event-list')).toContainText('runtime.custom_case_evaluation.completed')
 })
+
+test('approves a sample rule, promotes it, and evaluates custom facts', async ({ page }) => {
+  await page.route('/api/runtime/promote-rule', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        artifactPath: 'approved/rules/cmr_mass_score_above_cutoff.json',
+        compilation: {
+          generatedFiles: [
+            'agents/case_reasoner_generated.asl',
+            'beliefs/approved_rules.asl',
+            'beliefs/approved_rule_sources.asl',
+          ],
+          stdout: 'Compilation completed by Playwright stub.',
+          stderr: '',
+        },
+        rule: {
+          ruleId: 'cmr_mass_score_above_cutoff',
+          domain: 'cardiac_mass',
+          title: 'CMR Mass Score above cutoff',
+          ruleType: 'threshold',
+          reviewStatus: 'approved',
+          approvedForRuntime: true,
+          source: {
+            sourceId: 'paolisso_2024_cmr_mass_score',
+            quote: 'CMR Mass Score cutoff >= 5 supports malignancy suspicion in cardiac mass evaluation.',
+          },
+          conditions: ['score(Case, cmr_mass_score, Score)', 'cutoff(cmr_mass_score, Cutoff)', 'Score >= Cutoff'],
+          conclusions: ['risk(Case, high)', 'decision(Case, cmr_driven_high_suspicion)', 'activated_rule(Case, cmr_mass_score_above_cutoff)'],
+          missingDataBehavior: 'do_not_assume_negative',
+          runtimeImplementation: {
+            agentFile: 'agents/case_reasoner.asl',
+            activatedRuleFact: 'activated_rule(Case, cmr_mass_score_above_cutoff)',
+            sourceMappingFact: 'source_for_rule(cmr_mass_score_above_cutoff, paolisso_2024_cmr_mass_score)',
+          },
+          validatedBy: [],
+          limitations: [],
+        },
+      }),
+    })
+  })
+
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Load sample outputs' }).click()
+  await expect(page.getByLabel('Readable candidate rule fields')).toBeVisible()
+  await expect(page.getByText('Vocabulary mapped')).toBeVisible()
+
+  await page.getByPlaceholder('Review notes').fill('Accepted by sample-driven Playwright flow.')
+  await page.getByRole('button', { name: 'Approve this rule' }).click()
+  await expect(page.locator('.reviewed-rule').first()).toContainText('approved')
+
+  await page.getByRole('button', { name: 'Promote to runtime' }).click()
+  await expect(page.getByText('Compilation output')).toBeVisible()
+  await expect(page.getByText('Compilation completed by Playwright stub.')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Evaluate facts with Jason' }).click()
+  await expect(page.getByRole('heading', { name: 'cmr_driven_high_suspicion' })).toBeVisible({ timeout: 90_000 })
+  await expect(page.locator('code').filter({ hasText: /^cmr_mass_score_above_cutoff$/ }).first()).toBeVisible()
+})

@@ -19,6 +19,7 @@
     "test:trace": "node tools/trace/parse-jason-trace.mjs tools/trace/fixtures/gc04.jason-trace.log output/traces/gc04.trace.json && node tools/trace/validate-trace.mjs expected/traces/gc04.expected.json output/traces/gc04.trace.json",
     "test": "npm run validate:rules && npm run validate:compilation && npm run test:validate && npm run test:compile && npm run test:trace",
     "test:mas": "node tools/mas/test-all-cases.mjs",
-    "test:e2e": "npm --prefix app/review-console run test:e2e"
+    "test:e2e": "npm --prefix app/review-console run test:e2e",
+    "test:e2e:smoke": "npm --prefix app/review-console run test:e2e:smoke"
   }
 }

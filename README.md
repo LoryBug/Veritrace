@@ -7,8 +7,10 @@ source document
  -> LLM-assisted claim extraction
  -> candidate rule drafting
  -> human review
- -> approved symbolic rules
- -> Jason MAS runtime reasoning
+ -> promote approved rules to runtime
+ -> AgentSpeak compilation and validation
+ -> custom case facts
+ -> Jason MAS runtime reasoning in an isolated workspace
  -> structured trace
  -> constrained explanation
 ```
@@ -40,7 +42,7 @@ approved/rules/              Human-approved runtime rule artifacts
   ct_gray_zone_without_pet.json
 expected/traces/             JSON trace contracts for golden cases
 tools/
-  mas/                        Compiler, validator, tests
+  mas/                        Compiler, validator, MAS runners, tests
   trace/                      Jason trace parser + validator
 app/review-console/          React + Express design-time authoring app
 llm-dspy/                    Optional DSPy evaluation harness (Python)
@@ -73,6 +75,9 @@ npm run validate:compilation
 
 # Run the live Jason MAS over all golden cases
 npm run test:mas
+
+# Run non-LLM Playwright smoke tests
+npm run test:e2e:smoke
 ```
 
 ## Test Commands
@@ -86,11 +91,12 @@ npm run test:mas
 | `npm run compile` | Compile approved rules to AgentSpeak |
 | `npm run lint:ast-grep` | Custom ast-grep linting rules |
 | `npm run test:mas` | Live Jason MAS E2E for `gc04`, `gc00`, `gc_gray_zone` |
-| `npm run test:e2e` | Playwright review-console E2E with real LLM calls |
+| `npm run test:e2e:smoke` | Non-LLM Playwright smoke tests: promote-rule API, custom facts, Jason runtime |
+| `npm run test:e2e` | Full Playwright review-console E2E, including real LLM calls when configured |
 
 ## Review Console
 
-The web app for claim extraction, candidate rule drafting, and human review:
+The web app for claim extraction, candidate rule drafting, human review, runtime promotion, custom case evaluation, and trace verbalization:
 
 ```powershell
 cd app/review-console
@@ -101,14 +107,38 @@ npm run dev
 
 Open `http://127.0.0.1:5173`. The backend runs on port `8787`.
 
+Main review-console flows:
+
+- paste a paper/policy/guideline snippet and extract claims with the configured LLM;
+- draft a candidate symbolic rule from a selected claim;
+- review predicate mappings and raw AgentSpeak-compatible fragments;
+- approve, reject, or mark the candidate rule as needing revision;
+- promote an approved reviewed rule into `approved/rules/`;
+- compile and validate approved runtime rules;
+- enter custom case facts through the generic fact editor or guided predicate builder;
+- run Jason live and inspect the structured trace;
+- verbalize a trace with a constrained LLM prompt.
+
+If a promoted runtime artifact already exists, the UI asks before overwriting it. Promotion writes the approved JSON artifact, recompiles AgentSpeak, validates the generated runtime files, and rolls back the artifact if compilation fails.
+
 ## Trace Pipeline
 
-The live MAS test runs through the Gradle wrapper:
+The live MAS runners use the Gradle wrapper and Jason interpreter dependency. Runtime executions are isolated: each run creates a temporary MAS workspace under `output/runtime/.../workspace`, copies the runtime sources there, applies the selected case goal, and runs Jason from that workspace. Source files under `agents/`, `beliefs/`, and `cases/` are not patched during runtime tests.
+
+Golden case validation:
 
 ```powershell
 npm run test:mas
 npm run validate:traces
 ```
+
+Custom fact evaluation from the CLI:
+
+```powershell
+'{"caseId":"user_case_001","facts":["case(user_case_001)","available(user_case_001, cmr)","score(user_case_001, cmr_mass_score, 5)"]}' | node tools/mas/evaluate-case.mjs -
+```
+
+The output contains `mode: "jason_live_case"`, the normalized input facts, the structured trace, and the generated workspace/trace paths under `output/runtime/`.
 
 For lower-level trace tooling, parse and validate a Jason log manually:
 
@@ -143,7 +173,7 @@ LLM_API_KEY=your-provider-key
 LLM_MODEL=qwen/qwen3.6-27b
 ```
 
-The Playwright E2E suite also requires a real provider key. It accepts `LLM_API_KEY`, or provider-specific aliases such as `GROQ_API_KEY` and `OPENROUTER_API_KEY`.
+The full Playwright E2E suite requires a real provider key. It accepts `LLM_API_KEY`, or provider-specific aliases such as `GROQ_API_KEY` and `OPENROUTER_API_KEY`. The smoke suite `npm run test:e2e:smoke` does not call the LLM and is suitable for CI.
 
 ## DSPy Harness
 
@@ -157,7 +187,16 @@ trace-dspy-eval
 
 ## CI Pipeline
 
-GitHub Actions runs on every push: typecheck + build review console, lint, validate rules, compile, validate compilation, validate trace fixture, check DSPy syntax.
+GitHub Actions runs on every push and pull request:
+
+- install review-console dependencies with `npm ci`;
+- run the root validation suite with `npm test`;
+- typecheck and build the review console;
+- run live Jason MAS golden cases with `npm run test:mas`;
+- install Playwright Chromium;
+- run non-LLM Playwright smoke tests with `npm run test:e2e:smoke`.
+
+LLM-backed Playwright tests are intentionally not required in CI unless a separate secret-gated job is added.
 
 ## Case Study
 

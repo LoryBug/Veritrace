@@ -5,62 +5,61 @@ on:
   pull_request:
 
 jobs:
-  static-checks:
+  validate:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
+      - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: 22
           cache: npm
           cache-dependency-path: app/review-console/package-lock.json
 
-      - name: Setup Python
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
       - name: Install review console dependencies
         working-directory: app/review-console
-        run: npm install
+        run: npm ci
 
-      - name: Typecheck review console
-        working-directory: app/review-console
-        run: npm run typecheck
+      - name: Root validation suite
+        run: npm test
 
-      - name: Build review console
-        working-directory: app/review-console
-        run: npm run build
+      - name: Review console typecheck
+        run: npm --prefix app/review-console run typecheck
+
+      - name: Review console build
+        run: npm --prefix app/review-console run build
 
       - name: Ast-grep lint
         run: npm run lint:ast-grep
 
-      - name: Validate approved rule JSON
-        run: node tools/mas/validate-approved-rules.mjs
-
-      - name: Test rule validation library
-        run: node --test tools/mas/rule-validation.test.mjs
-
-      - name: Test MAS rule compiler
-        run: node --test tools/mas/compile-rules.test.mjs
-
       - name: Compile approved rules to AgentSpeak
-        run: node tools/mas/compile-rules.mjs
-
-      - name: Validate generated AgentSpeak compilation
-        run: node tools/mas/validate-compilation.mjs
+        run: npm run compile
 
       - name: Ensure generated artifacts are committed
         run: git diff --exit-code -- agents/case_reasoner_generated.asl beliefs/approved_rules.asl beliefs/approved_rule_sources.asl
 
-      - name: Validate trace fixture
-        run: |
-          node tools/trace/parse-jason-trace.mjs tools/trace/fixtures/gc04.jason-trace.log output/traces/gc04.trace.json
-          node tools/trace/validate-trace.mjs expected/traces/gc04.expected.json output/traces/gc04.trace.json
+      - name: Live Jason MAS golden cases
+        run: npm run test:mas
 
       - name: Check DSPy Python syntax
         run: python -m compileall llm-dspy/src
+
+      - name: Install Playwright Chromium
+        working-directory: app/review-console
+        run: npx playwright install --with-deps chromium
+
+      - name: Non-LLM Playwright smoke tests
+        run: npm run test:e2e:smoke
