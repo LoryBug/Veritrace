@@ -83,6 +83,20 @@ export const RuntimeCaseFactInputSchema = z.object({
   facts: z.array(z.string().min(1)).max(200),
 })
 
+export const PromoteRuleInputSchema = z.object({
+  overwrite: z.boolean().default(false),
+  rule: CandidateRuleSchema.omit({
+    reviewStatus: true,
+    approvedForRuntime: true,
+  }).extend({
+    title: z.string().min(1),
+    reviewStatus: z.literal('approved'),
+    approvedForRuntime: z.literal(true),
+    reviewedAt: z.string().min(1),
+    reviewNotes: z.array(z.string()).default([]),
+  }),
+})
+
 export const ApprovedRuleSchema = z.object({
   ruleId: z.string().min(1),
   domain: z.string().min(1),

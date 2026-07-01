@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { clearAuditEvents, compileApprovedRules, draftRule, evaluateRuntimeCase, extractClaims, fetchApprovedRules, fetchAuditEvents, fetchHealth, fetchRuntimeCases, fetchRuntimeTrace, recordAuditEvent, verbalizeTrace } from './api'
+import { clearAuditEvents, compileApprovedRules, draftRule, evaluateRuntimeCase, extractClaims, fetchApprovedRules, fetchAuditEvents, fetchHealth, fetchRuntimeCases, fetchRuntimeTrace, promoteRuleToRuntime, recordAuditEvent, verbalizeTrace } from './api'
+import { isVariable, labelAtom, parseLogicFragment } from './facts'
 import { humanizeFact, humanizeMissingData, humanizeMissingDataBehavior, humanizeNextStep, humanizeReviewReason, humanizeRuleId } from './humanize'
-import { explainFragment } from './predicate-vocabulary'
+import { explainFragment, getPredicateDefinition } from './predicate-vocabulary'
 import { sampleCandidateRule, sampleClaims, sampleSource } from './sample-data'
-import type { ApprovedRuntimeRule, AuditEvent, CandidateRule, Claim, LlmStatus, ReviewedRule, RuntimeCase, RuntimeTraceResponse, SourceType, TraceVerbalization } from './types'
+import type { ApprovedRuntimeRule, AuditEvent, CandidateRule, Claim, LlmStatus, ReviewedRule, RuleCompilationResult, RuntimeCase, RuntimeTraceResponse, SourceType, TraceVerbalization } from './types'
 
 type ReviewStatus = ReviewedRule['reviewStatus']
 
@@ -32,6 +33,55 @@ function parseFactInput(value: string) {
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith('//'))
     .map((line) => line.replace(/\.$/, ''))
+}
+
+type GuidedFactField = {
+  key: string
+  label: string
+  predicate: string
+  args: string[]
+  inputIndexes: number[]
+}
+
+function deriveGuidedFactFields(rules: ApprovedRuntimeRule[]) {
+  const fields = new Map<string, GuidedFactField>()
+
+  for (const rule of rules) {
+    for (const condition of rule.conditions) {
+      const fragment = parseLogicFragment(condition)
+      if (fragment.kind !== 'fact') continue
+
+      const definition = getPredicateDefinition(fragment.predicate, fragment.arity)
+      if (definition?.category !== 'case_input' || fragment.predicate === 'case') continue
+
+      const inputIndexes = fragment.args
+        .map((arg, index) => (isVariable(arg) && definition.args[index]?.role !== 'case' ? index : -1))
+        .filter((index) => index >= 0)
+      const key = `${fragment.predicate}(${fragment.args.join(',')})`
+      fields.set(key, {
+        key,
+        label: `${definition.label}: ${fragment.args.filter((arg, index) => definition.args[index]?.role !== 'case' && !isVariable(arg)).map(labelAtom).join(', ') || fragment.predicate}`,
+        predicate: fragment.predicate,
+        args: fragment.args,
+        inputIndexes,
+      })
+    }
+  }
+
+  return [...fields.values()].sort((a, b) => a.label.localeCompare(b.label))
+}
+
+function factFromGuidedField(field: GuidedFactField, caseId: string, values: Record<string, string>) {
+  if (field.inputIndexes.length === 0 && values[field.key] !== 'true') return null
+
+  const args = field.args.map((arg, index) => {
+    if (arg === 'Case') return caseId
+    if (!field.inputIndexes.includes(index)) return arg
+    return values[`${field.key}:${index}`]?.trim() ?? ''
+  })
+
+  if (args.some((arg) => !arg)) return null
+  return `${field.predicate}(${args.join(', ')})`
 }
 
 function LogicFragmentList({ items, conclusion = false }: { items: string[]; conclusion?: boolean }) {
@@ -66,6 +116,33 @@ function PredicateCoverage({ conditions, conclusions }: { conditions: string[]; 
       <span className="fragment-pill known">{known} known</span>
       <span className={unknown > 0 ? 'fragment-pill unknown' : 'fragment-pill neutral'}>{unknown} raw</span>
     </div>
+  )
+}
+
+function PredicateReviewPanel({ conditions, conclusions }: { conditions: string[]; conclusions: string[] }) {
+  const explanations = [...conditions, ...conclusions].map(explainFragment)
+  const unknown = explanations.filter((explanation) => explanation.status === 'unknown')
+
+  return (
+    <section className="rule-entity-card predicate-review-card">
+      <span className="entity-label">Predicate review</span>
+      <h3>{unknown.length === 0 ? 'Vocabulary mapped' : 'Mapping required'}</h3>
+      {unknown.length === 0 ? (
+        <p>Every condition and conclusion is covered by the predicate vocabulary or a known expression.</p>
+      ) : (
+        <>
+          <p>These fragments are valid raw logic, but need vocabulary mapping or explicit reviewer acceptance before reuse in guided forms.</p>
+          <ul className="entity-list domain-list">
+            {unknown.map((explanation) => (
+              <li key={explanation.source} className="unknown-fragment">
+                <span>{explanation.summary}</span>
+                <code>{explanation.source}</code>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
   )
 }
 
@@ -107,6 +184,8 @@ function RuleEntityCards({ rule }: { rule: CandidateRule }) {
         <h3>Missing data</h3>
         <p>{humanizeMissingDataBehavior(rule.missingDataBehavior)}</p>
       </section>
+
+      <PredicateReviewPanel conditions={rule.conditions} conclusions={rule.conclusions} />
 
       <section className="rule-entity-card">
         <span className="entity-label">Review state</span>
@@ -200,10 +279,11 @@ export function App() {
   const [selectedRuntimeCase, setSelectedRuntimeCase] = useState('gc04')
   const [customCaseId, setCustomCaseId] = useState('user_case_001')
   const [customFactsText, setCustomFactsText] = useState(defaultCustomFacts)
+  const [guidedFactValues, setGuidedFactValues] = useState<Record<string, string>>({})
   const [runtimeTrace, setRuntimeTrace] = useState<RuntimeTraceResponse | null>(null)
   const [traceVerbalization, setTraceVerbalization] = useState<TraceVerbalization | null>(null)
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([])
-  const [compilationResult, setCompilationResult] = useState<{ generatedFiles: string[]; stdout: string; stderr: string } | null>(null)
+  const [compilationResult, setCompilationResult] = useState<RuleCompilationResult | null>(null)
   const [isBusy, setIsBusy] = useState(false)
   const [isRuntimeBusy, setIsRuntimeBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -222,6 +302,7 @@ export function App() {
   }, [])
 
   const selectedClaim = claims.find((claim) => claim.claimId === selectedClaimId) ?? claims[0]
+  const guidedFactFields = deriveGuidedFactFields(approvedRules)
   const customFactPreview = parseFactInput(customFactsText)
   const activeApprovedRules = runtimeTrace
     ? approvedRules.filter((rule) => runtimeTrace.trace.activatedRules.includes(rule.ruleId))
@@ -273,6 +354,7 @@ export function App() {
     if (!candidateRule) return
     const reviewed: ReviewedRule = {
       ...candidateRule,
+      title: candidateRule.title || candidateRule.ruleId.replace(/_/g, ' '),
       reviewStatus: status,
       approvedForRuntime: status === 'approved',
       reviewedAt: new Date().toISOString(),
@@ -331,6 +413,19 @@ export function App() {
     }
   }
 
+  function applyGuidedFacts() {
+    const facts = guidedFactFields
+      .map((field) => factFromGuidedField(field, customCaseId.trim(), guidedFactValues))
+      .filter((fact): fact is string => Boolean(fact))
+    if (facts.length === 0) return
+
+    const existing = new Set(parseFactInput(customFactsText))
+    const nextFacts = [`case(${customCaseId.trim()})`, ...facts].filter((fact) => !existing.has(fact))
+    if (nextFacts.length === 0) return
+
+    setCustomFactsText((current) => `${current.trim()}\n${nextFacts.map((fact) => `${fact}.`).join('\n')}`.trim())
+  }
+
   async function handleVerbalizeTrace() {
     if (!runtimeTrace) return
     setIsRuntimeBusy(true)
@@ -369,6 +464,22 @@ export function App() {
       await refreshAuditEvents()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to compile approved rules')
+    } finally {
+      setIsRuntimeBusy(false)
+    }
+  }
+
+  async function handlePromoteRule(rule: ReviewedRule) {
+    setIsRuntimeBusy(true)
+    setError(null)
+    try {
+      const result = await promoteRuleToRuntime(rule)
+      setCompilationResult(result.compilation)
+      const approved = await fetchApprovedRules()
+      setApprovedRules(approved.rules)
+      await refreshAuditEvents()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to promote rule to runtime')
     } finally {
       setIsRuntimeBusy(false)
     }
@@ -552,6 +663,43 @@ export function App() {
                     <input value={customCaseId} onChange={(event) => setCustomCaseId(event.target.value)} />
                   </label>
                 </div>
+                {guidedFactFields.length > 0 && (
+                  <div className="guided-fact-builder" aria-label="Guided fact builder">
+                    <span className="entity-label">Guided facts from approved predicates</span>
+                    <div className="guided-fact-grid">
+                      {guidedFactFields.map((field) => (
+                        <section key={field.key} className="guided-fact-field">
+                          <strong>{field.label}</strong>
+                          <code>{field.predicate}/{field.args.length}</code>
+                          {field.inputIndexes.length === 0 ? (
+                            <label className="checkbox-label">
+                              <input
+                                type="checkbox"
+                                checked={guidedFactValues[field.key] === 'true'}
+                                onChange={(event) => setGuidedFactValues((values) => ({ ...values, [field.key]: event.target.checked ? 'true' : 'false' }))}
+                              />
+                              Include this fact
+                            </label>
+                          ) : (
+                            field.inputIndexes.map((index) => (
+                              <label key={`${field.key}-${index}`}>
+                                {labelAtom(field.args[index])}
+                                <input
+                                  value={guidedFactValues[`${field.key}:${index}`] ?? ''}
+                                  onChange={(event) => setGuidedFactValues((values) => ({ ...values, [`${field.key}:${index}`]: event.target.value }))}
+                                  placeholder={field.args[index]}
+                                />
+                              </label>
+                            ))
+                          )}
+                        </section>
+                      ))}
+                    </div>
+                    <div className="cm-actions compact-actions">
+                      <button type="button" className="cm-button secondary" onClick={applyGuidedFacts}>Add guided facts to editor</button>
+                    </div>
+                  </div>
+                )}
                 <textarea value={customFactsText} onChange={(event) => setCustomFactsText(event.target.value)} rows={7} />
                 {customFactPreview.length > 0 && (
                   <details className="raw-json-details">
@@ -673,11 +821,15 @@ export function App() {
               </div>
               <div className="reviewed-list">
                 {reviewedRules.map((rule) => (
-                  <button key={`${rule.ruleId}-${rule.reviewedAt}`} type="button" className="reviewed-rule" onClick={() => exportJson(rule, `${rule.ruleId}.${rule.reviewStatus}.json`)}>
+                  <section key={`${rule.ruleId}-${rule.reviewedAt}`} className="reviewed-rule">
                     <span className={`state-pill ${rule.reviewStatus}`}>{rule.reviewStatus}</span>
                     <strong>{rule.ruleId}</strong>
                     <small>{rule.approvedForRuntime ? 'Runtime eligible' : 'Not runtime eligible'}</small>
-                  </button>
+                    <div className="reviewed-rule-actions">
+                      <button type="button" className="cm-button secondary" onClick={() => exportJson(rule, `${rule.ruleId}.${rule.reviewStatus}.json`)}>Export JSON</button>
+                      <button type="button" className="cm-button" onClick={() => handlePromoteRule(rule)} disabled={isRuntimeBusy || !rule.approvedForRuntime || rule.reviewStatus !== 'approved'}>Promote to runtime</button>
+                    </div>
+                  </section>
                 ))}
               </div>
             </article>

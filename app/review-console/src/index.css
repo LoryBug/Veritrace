@@ -381,13 +381,24 @@ label select {
   display: grid;
   gap: 5px;
   width: 100%;
-  cursor: pointer;
   border: 1px solid var(--cm-line);
   border-radius: 14px;
   background: var(--cm-surface-2);
   color: var(--cm-text);
   padding: 13px;
   text-align: left;
+}
+
+.reviewed-rule-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.reviewed-rule-actions .cm-button {
+  padding: 8px 10px;
+  font-size: 12px;
 }
 
 .claim-card.active {
@@ -436,6 +447,10 @@ label select {
 .rule-entity-card.prominent {
   grid-column: 1 / -1;
   background: linear-gradient(135deg, rgba(36, 91, 148, 0.08), rgba(15, 139, 141, 0.08));
+}
+
+.predicate-review-card {
+  grid-column: 1 / -1;
 }
 
 .entity-label {
@@ -598,6 +613,54 @@ label select {
 .custom-case-grid {
   grid-template-columns: minmax(0, 1fr);
   margin-top: 12px;
+}
+
+.guided-fact-builder {
+  margin-top: 14px;
+  border: 1px solid rgba(217, 226, 239, 0.9);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 14px;
+}
+
+.guided-fact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.guided-fact-field {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(217, 226, 239, 0.8);
+  border-radius: 12px;
+  background: var(--cm-surface-2);
+  padding: 10px;
+}
+
+.guided-fact-field strong {
+  color: var(--cm-dark);
+  font-size: 13px;
+}
+
+.guided-fact-field code {
+  width: fit-content;
+  border-radius: 8px;
+  background: rgba(15, 34, 61, 0.06);
+  color: var(--cm-muted);
+  padding: 4px 6px;
+  font-size: 11px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox-label input {
+  width: auto;
+  margin: 0;
 }
 
 .runtime-summary {
@@ -882,6 +945,7 @@ label select {
   .cm-layout,
   .form-grid,
   .rule-entity-grid,
+  .guided-fact-grid,
   .runtime-controls,
   .runtime-summary,
   .trace-grid,

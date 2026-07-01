@@ -108,6 +108,18 @@ export type ApprovedRuntimeRule = {
   artifactPath?: string
 }
 
+export type RuleCompilationResult = {
+  generatedFiles: string[]
+  stdout: string
+  stderr: string
+}
+
+export type RulePromotionResult = {
+  rule: ApprovedRuntimeRule
+  artifactPath: string
+  compilation: RuleCompilationResult
+}
+
 export type AuditEvent = {
   eventId: string
   timestamp: string

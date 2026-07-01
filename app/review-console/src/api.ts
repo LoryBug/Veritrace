@@ -1,4 +1,4 @@
-import type { ApprovedRuntimeRule, AuditEvent, CandidateRule, Claim, LlmStatus, RuntimeCase, RuntimeTraceResponse, SourceSnippet, SourceType, TraceVerbalization, RuntimeTrace } from './types'
+import type { ApprovedRuntimeRule, AuditEvent, CandidateRule, Claim, LlmStatus, ReviewedRule, RuleCompilationResult, RulePromotionResult, RuntimeCase, RuntimeTraceResponse, SourceSnippet, SourceType, TraceVerbalization, RuntimeTrace } from './types'
 
 async function parseResponse<T>(response: Response): Promise<T> {
   const body = await response.json()
@@ -50,9 +50,19 @@ export async function fetchApprovedRules() {
 }
 
 export async function compileApprovedRules() {
-  return parseResponse<{ generatedFiles: string[]; stdout: string; stderr: string }>(
+  return parseResponse<RuleCompilationResult>(
     await fetch('/api/compile-rules', {
       method: 'POST',
+    }),
+  )
+}
+
+export async function promoteRuleToRuntime(rule: ReviewedRule, overwrite = false) {
+  return parseResponse<RulePromotionResult>(
+    await fetch('/api/runtime/promote-rule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rule, overwrite }),
     }),
   )
 }

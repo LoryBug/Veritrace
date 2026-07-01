@@ -60,3 +60,20 @@ test('loads runtime trace and verbalizes it with the real LLM', async ({ page })
   await expect(page.locator('.audit-event-list')).toContainText('runtime.trace_loaded')
   await expect(page.locator('.audit-event-list')).toContainText('llm.trace_verbalization.completed')
 })
+
+test('evaluates custom AgentSpeak facts with the Jason runtime', async ({ page }) => {
+  await page.goto('/')
+
+  await expect(page.getByText('Custom case facts')).toBeVisible()
+  await expect(page.getByText('Guided facts from approved predicates')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Evaluate facts with Jason' }).click()
+
+  await expect(page.getByRole('heading', { name: 'cmr_driven_high_suspicion' })).toBeVisible({ timeout: 90_000 })
+  await expect(page.getByText('Risk:')).toBeVisible()
+  await expect(page.getByText('high', { exact: true })).toBeVisible()
+  await expect(page.locator('code').filter({ hasText: /^cmr_mass_score_above_cutoff$/ }).first()).toBeVisible()
+  await expect(page.getByText('Trace:')).toBeVisible()
+
+  await expect(page.locator('.audit-event-list')).toContainText('runtime.custom_case_evaluation.completed')
+})

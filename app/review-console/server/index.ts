@@ -2,13 +2,14 @@ import cors from 'cors'
 import { execFile } from 'node:child_process'
 import dotenv from 'dotenv'
 import express from 'express'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { promisify } from 'node:util'
+import type { z } from 'zod'
 import { clearAuditEvents, readAuditEvents, recordAuditEvent } from './audit.js'
 import { completeJson, publicLlmStatus } from './llm.js'
 import { claimExtractionPrompt, ruleDraftingPrompt, traceVerbalizationPrompt } from './prompts.js'
-import { CandidateRuleSchema, ClaimsResponseSchema, DraftRuleInputSchema, RuntimeCaseFactInputSchema, SourceInputSchema, TraceSchema, TraceVerbalizationInputSchema, TraceVerbalizationOutputSchema } from './schemas.js'
+import { ApprovedRuleSchema, CandidateRuleSchema, ClaimsResponseSchema, DraftRuleInputSchema, PromoteRuleInputSchema, RuntimeCaseFactInputSchema, SourceInputSchema, TraceSchema, TraceVerbalizationInputSchema, TraceVerbalizationOutputSchema } from './schemas.js'
 import { loadApprovedRules } from './approved-rules.js'
 import { loadRuntimeTrace, runtimeCases, sourceSnippetsFor } from './runtime-demo.js'
 
@@ -16,6 +17,7 @@ dotenv.config()
 
 const execFileAsync = promisify(execFile)
 const repoRoot = path.resolve(process.cwd(), '../..')
+const approvedRulesDir = path.join(repoRoot, 'approved/rules')
 const app = express()
 const host = process.env.API_HOST || '127.0.0.1'
 const port = Number(process.env.PORT || 8787)
@@ -214,6 +216,66 @@ app.post('/api/compile-rules', async (_request, response) => {
   }
 })
 
+app.post('/api/runtime/promote-rule', async (request, response) => {
+  const startedAt = Date.now()
+  let artifactPath = ''
+  let previousArtifact: string | null = null
+  try {
+    const input = PromoteRuleInputSchema.parse(request.body)
+    const artifact = ApprovedRuleSchema.parse(toApprovedRuntimeArtifact(input.rule))
+    artifactPath = path.join(approvedRulesDir, `${artifact.ruleId}.json`)
+    const artifactExists = await exists(artifactPath)
+    if (artifactExists && !input.overwrite) {
+      response.status(409).json({ error: `Approved rule artifact already exists: approved/rules/${artifact.ruleId}.json` })
+      return
+    }
+
+    await recordAuditEvent({
+      eventType: 'runtime.rule_promotion.started',
+      actor: 'human_reviewer',
+      status: 'started',
+      details: {
+        ruleId: artifact.ruleId,
+        overwrite: input.overwrite,
+      },
+    })
+
+    previousArtifact = artifactExists ? await readFile(artifactPath, 'utf8') : null
+    await mkdir(approvedRulesDir, { recursive: true })
+    await writeFile(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`, 'utf8')
+
+    const compilation = await compileAndValidateRules()
+    await recordAuditEvent({
+      eventType: 'runtime.rule_promotion.completed',
+      actor: 'human_reviewer',
+      status: 'success',
+      details: {
+        ruleId: artifact.ruleId,
+        artifactPath: `approved/rules/${artifact.ruleId}.json`,
+        elapsedMs: Date.now() - startedAt,
+      },
+    })
+
+    response.json({
+      rule: { ...artifact, artifactPath: `approved/rules/${artifact.ruleId}.json` },
+      artifactPath: `approved/rules/${artifact.ruleId}.json`,
+      compilation,
+    })
+  } catch (error) {
+    if (artifactPath) await restoreArtifact(artifactPath, previousArtifact)
+    await recordAuditEvent({
+      eventType: 'runtime.rule_promotion.failed',
+      actor: 'human_reviewer',
+      status: 'failure',
+      details: {
+        elapsedMs: Date.now() - startedAt,
+        error: error instanceof Error ? error.message : 'Unknown rule promotion error',
+      },
+    })
+    response.status(400).json({ error: error instanceof Error ? error.message : 'Unable to promote rule' })
+  }
+})
+
 app.get('/api/runtime/trace/:caseId', async (request, response) => {
   try {
     const runtimeTrace = await loadRuntimeTrace(request.params.caseId)
@@ -358,6 +420,56 @@ app.post('/api/verbalize-trace', async (request, response) => {
     response.status(400).json({ error: error instanceof Error ? error.message : 'Unknown trace verbalization error' })
   }
 })
+
+async function compileAndValidateRules() {
+  const compileScript = path.join(repoRoot, 'tools/mas/compile-rules.mjs')
+  const validateScript = path.join(repoRoot, 'tools/mas/validate-compilation.mjs')
+  const compile = await execFileAsync(process.execPath, [compileScript], { cwd: repoRoot })
+  const validate = await execFileAsync(process.execPath, [validateScript], { cwd: repoRoot })
+
+  return {
+    generatedFiles: [
+      'agents/case_reasoner_generated.asl',
+      'beliefs/approved_rules.asl',
+      'beliefs/approved_rule_sources.asl',
+    ],
+    stdout: `${compile.stdout}${validate.stdout}`.trim(),
+    stderr: `${compile.stderr}${validate.stderr}`.trim(),
+  }
+}
+
+function toApprovedRuntimeArtifact(rule: z.infer<typeof PromoteRuleInputSchema>['rule']) {
+  return {
+    ...rule,
+    runtimeImplementation: {
+      agentFile: 'agents/case_reasoner.asl',
+      activatedRuleFact: `activated_rule(Case, ${rule.ruleId})`,
+      sourceMappingFact: `source_for_rule(${rule.ruleId}, ${rule.source.sourceId})`,
+    },
+    usedEvidence: [],
+    validatedBy: [],
+    limitations: rule.reviewNotes.length > 0 ? rule.reviewNotes : ['Promoted from human review console; external validation is not recorded yet.'],
+    promotedAt: new Date().toISOString(),
+  }
+}
+
+async function restoreArtifact(filePath: string, previousArtifact: string | null) {
+  if (previousArtifact === null) {
+    if (await exists(filePath)) await unlink(filePath)
+    return
+  }
+
+  await writeFile(filePath, previousArtifact, 'utf8')
+}
+
+async function exists(filePath: string) {
+  try {
+    await access(filePath)
+    return true
+  } catch {
+    return false
+  }
+}
 
 app.listen(port, host, () => {
   console.log(`Review console API listening on http://${host}:${port}`)
