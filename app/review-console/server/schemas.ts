@@ -78,6 +78,11 @@ export const TraceVerbalizationOutputSchema = z.object({
   limitations: z.array(z.string()),
 })
 
+export const RuntimeCaseFactInputSchema = z.object({
+  caseId: z.string().regex(/^[a-z][A-Za-z0-9_]*$/, 'caseId must be a safe AgentSpeak atom, e.g. user_case_001'),
+  facts: z.array(z.string().min(1)).max(200),
+})
+
 export const ApprovedRuleSchema = z.object({
   ruleId: z.string().min(1),
   domain: z.string().min(1),

@@ -30,6 +30,13 @@ const sourceSnippetMap: Record<string, string> = {
   local_safety_behavior: 'Missing data and discordance are surfaced explicitly instead of being treated as negative evidence.',
 }
 
+export function sourceSnippetsFor(sourceIds: string[]) {
+  return sourceIds.map((sourceId) => ({
+    sourceId,
+    snippet: sourceSnippetMap[sourceId] || 'No curated snippet available for this source.',
+  }))
+}
+
 export async function loadRuntimeTrace(caseId: string) {
   const runtimeCase = runtimeCases.find((item) => item.caseId === caseId)
   if (!runtimeCase) {
@@ -38,10 +45,7 @@ export async function loadRuntimeTrace(caseId: string) {
 
   const tracePath = path.join(repoRoot, runtimeCase.expectedTracePath)
   const trace = TraceSchema.parse(JSON.parse(await readFile(tracePath, 'utf8')))
-  const sourceSnippets = trace.sources.map((sourceId) => ({
-    sourceId,
-    snippet: sourceSnippetMap[sourceId] || 'No curated snippet available for this source.',
-  }))
+  const sourceSnippets = sourceSnippetsFor(trace.sources)
 
   return {
     mode: 'expected_trace_demo',

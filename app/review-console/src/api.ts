@@ -61,6 +61,16 @@ export async function fetchRuntimeTrace(caseId: string) {
   return parseResponse<RuntimeTraceResponse>(await fetch(`/api/runtime/trace/${encodeURIComponent(caseId)}`))
 }
 
+export async function evaluateRuntimeCase(input: { caseId: string; facts: string[] }) {
+  return parseResponse<RuntimeTraceResponse>(
+    await fetch('/api/runtime/evaluate-case', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    }),
+  )
+}
+
 export async function verbalizeTrace(input: { trace: RuntimeTrace; sourceSnippets: SourceSnippet[] }) {
   return parseResponse<TraceVerbalization>(
     await fetch('/api/verbalize-trace', {

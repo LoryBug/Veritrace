@@ -512,6 +512,49 @@ label select {
   font-size: 11px;
 }
 
+.entity-list.domain-list li.unknown-fragment {
+  border-color: rgba(183, 121, 31, 0.34);
+  background: rgba(183, 121, 31, 0.07);
+}
+
+.fragment-metadata,
+.predicate-coverage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.predicate-coverage {
+  margin-top: 10px;
+}
+
+.fragment-pill {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 7px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fragment-pill.known {
+  background: rgba(22, 120, 76, 0.12);
+  color: var(--cm-low);
+}
+
+.fragment-pill.unknown {
+  background: rgba(183, 121, 31, 0.14);
+  color: var(--cm-mid);
+}
+
+.fragment-pill.neutral {
+  background: rgba(15, 34, 61, 0.07);
+  color: var(--cm-muted);
+}
+
 .entity-list.conclusions li {
   border-color: rgba(22, 120, 76, 0.2);
   background: rgba(22, 120, 76, 0.06);
@@ -542,6 +585,19 @@ label select {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: end;
+}
+
+.custom-case-panel {
+  margin-top: 16px;
+  border: 1px solid rgba(15, 139, 141, 0.22);
+  border-radius: 16px;
+  background: rgba(15, 139, 141, 0.05);
+  padding: 16px;
+}
+
+.custom-case-grid {
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 12px;
 }
 
 .runtime-summary {

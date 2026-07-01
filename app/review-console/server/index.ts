@@ -2,14 +2,15 @@ import cors from 'cors'
 import { execFile } from 'node:child_process'
 import dotenv from 'dotenv'
 import express from 'express'
+import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { promisify } from 'node:util'
 import { clearAuditEvents, readAuditEvents, recordAuditEvent } from './audit.js'
 import { completeJson, publicLlmStatus } from './llm.js'
 import { claimExtractionPrompt, ruleDraftingPrompt, traceVerbalizationPrompt } from './prompts.js'
-import { CandidateRuleSchema, ClaimsResponseSchema, DraftRuleInputSchema, SourceInputSchema, TraceVerbalizationInputSchema, TraceVerbalizationOutputSchema } from './schemas.js'
+import { CandidateRuleSchema, ClaimsResponseSchema, DraftRuleInputSchema, RuntimeCaseFactInputSchema, SourceInputSchema, TraceSchema, TraceVerbalizationInputSchema, TraceVerbalizationOutputSchema } from './schemas.js'
 import { loadApprovedRules } from './approved-rules.js'
-import { loadRuntimeTrace, runtimeCases } from './runtime-demo.js'
+import { loadRuntimeTrace, runtimeCases, sourceSnippetsFor } from './runtime-demo.js'
 
 dotenv.config()
 
@@ -241,6 +242,76 @@ app.get('/api/runtime/trace/:caseId', async (request, response) => {
     response.json(runtimeTrace)
   } catch (error) {
     response.status(404).json({ error: error instanceof Error ? error.message : 'Unknown runtime trace error' })
+  }
+})
+
+app.post('/api/runtime/evaluate-case', async (request, response) => {
+  const startedAt = Date.now()
+  try {
+    const input = RuntimeCaseFactInputSchema.parse(request.body)
+    await recordAuditEvent({
+      eventType: 'runtime.custom_case_evaluation.started',
+      actor: 'runtime_demo',
+      status: 'started',
+      details: {
+        caseId: input.caseId,
+        factCount: input.facts.length,
+      },
+    })
+
+    const runtimeDir = path.join(repoRoot, 'output/runtime', input.caseId)
+    const inputPath = path.join(runtimeDir, 'input.json')
+    await mkdir(runtimeDir, { recursive: true })
+    await writeFile(inputPath, `${JSON.stringify(input, null, 2)}\n`, 'utf8')
+
+    const evaluateScript = path.join(repoRoot, 'tools/mas/evaluate-case.mjs')
+    const run = await execFileAsync(process.execPath, [evaluateScript, inputPath], {
+      cwd: repoRoot,
+      timeout: 90000,
+      maxBuffer: 1024 * 1024 * 10,
+    })
+    const raw = JSON.parse(run.stdout)
+    const trace = TraceSchema.parse(raw.trace)
+    const result = {
+      mode: 'jason_live_case',
+      note: 'This trace was produced by running the Jason MAS with user-provided AgentSpeak facts.',
+      case: {
+        caseId: input.caseId,
+        label: `Custom case: ${input.caseId}`,
+        expectedTracePath: raw.tracePath,
+      },
+      inputFacts: raw.inputFacts as string[],
+      trace,
+      sourceSnippets: sourceSnippetsFor(trace.sources),
+      outputDir: raw.outputDir as string,
+      tracePath: raw.tracePath as string,
+    }
+
+    await recordAuditEvent({
+      eventType: 'runtime.custom_case_evaluation.completed',
+      actor: 'runtime_demo',
+      status: 'success',
+      details: {
+        caseId: trace.caseId,
+        decision: trace.decision,
+        risk: trace.risk,
+        activatedRules: trace.activatedRules,
+        elapsedMs: Date.now() - startedAt,
+      },
+    })
+
+    response.json(result)
+  } catch (error) {
+    await recordAuditEvent({
+      eventType: 'runtime.custom_case_evaluation.failed',
+      actor: 'runtime_demo',
+      status: 'failure',
+      details: {
+        elapsedMs: Date.now() - startedAt,
+        error: error instanceof Error ? error.message : 'Unknown custom case evaluation error',
+      },
+    })
+    response.status(400).json({ error: error instanceof Error ? error.message : 'Unable to evaluate custom case' })
   }
 })
 

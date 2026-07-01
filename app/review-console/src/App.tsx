@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { clearAuditEvents, compileApprovedRules, draftRule, extractClaims, fetchApprovedRules, fetchAuditEvents, fetchHealth, fetchRuntimeCases, fetchRuntimeTrace, recordAuditEvent, verbalizeTrace } from './api'
+import { clearAuditEvents, compileApprovedRules, draftRule, evaluateRuntimeCase, extractClaims, fetchApprovedRules, fetchAuditEvents, fetchHealth, fetchRuntimeCases, fetchRuntimeTrace, recordAuditEvent, verbalizeTrace } from './api'
 import { humanizeFact, humanizeMissingData, humanizeMissingDataBehavior, humanizeNextStep, humanizeReviewReason, humanizeRuleId } from './humanize'
+import { explainFragment } from './predicate-vocabulary'
 import { sampleCandidateRule, sampleClaims, sampleSource } from './sample-data'
 import type { ApprovedRuntimeRule, AuditEvent, CandidateRule, Claim, LlmStatus, ReviewedRule, RuntimeCase, RuntimeTraceResponse, SourceType, TraceVerbalization } from './types'
 
@@ -16,6 +17,58 @@ const canonicalConcepts = [
   'requires_human_review(Case, Reason)',
 ]
 
+const defaultCustomFacts = [
+  'case(user_case_001).',
+  'unavailable(user_case_001, echo).',
+  'available(user_case_001, cmr).',
+  'unavailable(user_case_001, ct_pet).',
+  'unavailable(user_case_001, pet).',
+  'score(user_case_001, cmr_mass_score, 5).',
+].join('\n')
+
+function parseFactInput(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('//'))
+    .map((line) => line.replace(/\.$/, ''))
+}
+
+function LogicFragmentList({ items, conclusion = false }: { items: string[]; conclusion?: boolean }) {
+  return (
+    <ul className={conclusion ? 'entity-list conclusions domain-list' : 'entity-list domain-list'}>
+      {items.map((item, index) => {
+        const explanation = explainFragment(item)
+        return (
+          <li key={`${item}-${index}`} className={explanation.status === 'unknown' ? 'unknown-fragment' : undefined}>
+            <span>{explanation.summary}</span>
+            <div className="fragment-metadata" aria-label="Predicate mapping metadata">
+              <span className={`fragment-pill ${explanation.status}`}>{explanation.status === 'known' ? 'known mapping' : 'raw fragment'}</span>
+              {explanation.predicate && <span className="fragment-pill neutral">{explanation.predicate}/{explanation.arity}</span>}
+              {explanation.category && <span className="fragment-pill neutral">{explanation.category.replace(/_/g, ' ')}</span>}
+              {explanation.label && <span className="fragment-pill neutral">{explanation.label}</span>}
+            </div>
+            <code>{item}</code>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function PredicateCoverage({ conditions, conclusions }: { conditions: string[]; conclusions: string[] }) {
+  const explanations = [...conditions, ...conclusions].map(explainFragment)
+  const known = explanations.filter((explanation) => explanation.status === 'known').length
+  const unknown = explanations.length - known
+
+  return (
+    <div className="predicate-coverage" aria-label="Predicate vocabulary coverage">
+      <span className="fragment-pill known">{known} known</span>
+      <span className={unknown > 0 ? 'fragment-pill unknown' : 'fragment-pill neutral'}>{unknown} raw</span>
+    </div>
+  )
+}
+
 function RuleEntityCards({ rule }: { rule: CandidateRule }) {
   return (
     <div className="rule-entity-grid" aria-label="Readable candidate rule fields">
@@ -28,6 +81,7 @@ function RuleEntityCards({ rule }: { rule: CandidateRule }) {
         <p>
           Domain: <strong>{rule.domain}</strong> · Type: <strong>{rule.ruleType}</strong>
         </p>
+        <PredicateCoverage conditions={rule.conditions} conclusions={rule.conclusions} />
       </section>
 
       <section className="rule-entity-card">
@@ -39,27 +93,13 @@ function RuleEntityCards({ rule }: { rule: CandidateRule }) {
       <section className="rule-entity-card">
         <span className="entity-label">When this rule applies</span>
         <h3>Conditions</h3>
-        <ul className="entity-list domain-list">
-          {rule.conditions.map((condition) => (
-            <li key={condition}>
-              <span>{humanizeFact(condition)}</span>
-              <code>{condition}</code>
-            </li>
-          ))}
-        </ul>
+        <LogicFragmentList items={rule.conditions} />
       </section>
 
       <section className="rule-entity-card">
         <span className="entity-label">What the rule produces</span>
         <h3>Conclusions</h3>
-        <ul className="entity-list conclusions domain-list">
-          {rule.conclusions.map((conclusion) => (
-            <li key={conclusion}>
-              <span>{humanizeFact(conclusion)}</span>
-              <code>{conclusion}</code>
-            </li>
-          ))}
-        </ul>
+        <LogicFragmentList items={rule.conclusions} conclusion />
       </section>
 
       <section className="rule-entity-card">
@@ -110,6 +150,7 @@ function ApprovedRuleCard({ rule, active = false }: { rule: ApprovedRuntimeRule;
       <h3>{rule.title}</h3>
       <p><strong>{rule.ruleId}</strong></p>
       <p>Source: {rule.source.sourceId}</p>
+      <PredicateCoverage conditions={rule.conditions} conclusions={rule.conclusions} />
       <p>Runtime: {rule.runtimeImplementation.activatedRuleFact}</p>
       {rule.artifactPath && <small>{rule.artifactPath}</small>}
     </article>
@@ -157,6 +198,8 @@ export function App() {
   const [runtimeCases, setRuntimeCases] = useState<RuntimeCase[]>([])
   const [approvedRules, setApprovedRules] = useState<ApprovedRuntimeRule[]>([])
   const [selectedRuntimeCase, setSelectedRuntimeCase] = useState('gc04')
+  const [customCaseId, setCustomCaseId] = useState('user_case_001')
+  const [customFactsText, setCustomFactsText] = useState(defaultCustomFacts)
   const [runtimeTrace, setRuntimeTrace] = useState<RuntimeTraceResponse | null>(null)
   const [traceVerbalization, setTraceVerbalization] = useState<TraceVerbalization | null>(null)
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([])
@@ -179,6 +222,7 @@ export function App() {
   }, [])
 
   const selectedClaim = claims.find((claim) => claim.claimId === selectedClaimId) ?? claims[0]
+  const customFactPreview = parseFactInput(customFactsText)
   const activeApprovedRules = runtimeTrace
     ? approvedRules.filter((rule) => runtimeTrace.trace.activatedRules.includes(rule.ruleId))
     : []
@@ -268,6 +312,20 @@ export function App() {
       await refreshAuditEvents()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load runtime trace')
+    } finally {
+      setIsRuntimeBusy(false)
+    }
+  }
+
+  async function handleEvaluateCustomCase() {
+    setIsRuntimeBusy(true)
+    setError(null)
+    setTraceVerbalization(null)
+    try {
+      setRuntimeTrace(await evaluateRuntimeCase({ caseId: customCaseId.trim(), facts: customFactPreview }))
+      await refreshAuditEvents()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to evaluate custom case')
     } finally {
       setIsRuntimeBusy(false)
     }
@@ -468,8 +526,8 @@ export function App() {
             <article className="cm-card runtime-demo-card">
               <div className="cm-card-header">
                 <div className="cm-card-title">
-                  <h2>Runtime trace demo</h2>
-                  <p>Select a golden case, load its structured trace, then verbalize it with the constrained LLM.</p>
+                  <h2>Runtime evaluation</h2>
+                  <p>Load a golden trace or run Jason live from generic AgentSpeak facts. No rule-specific form is required.</p>
                 </div>
               </div>
 
@@ -483,6 +541,30 @@ export function App() {
                 <button type="button" className="cm-button" onClick={handleLoadRuntimeTrace} disabled={isRuntimeBusy}>Load trace</button>
               </div>
 
+              <section className="custom-case-panel" aria-label="Custom case fact evaluation">
+                <div className="cm-card-title">
+                  <h2>Custom case facts</h2>
+                  <p>Paste facts for any approved-rule domain. The backend validates and runs them through Jason as runtime case input.</p>
+                </div>
+                <div className="form-grid custom-case-grid">
+                  <label>
+                    Case ID
+                    <input value={customCaseId} onChange={(event) => setCustomCaseId(event.target.value)} />
+                  </label>
+                </div>
+                <textarea value={customFactsText} onChange={(event) => setCustomFactsText(event.target.value)} rows={7} />
+                {customFactPreview.length > 0 && (
+                  <details className="raw-json-details">
+                    <summary>Preview parsed facts and predicate mappings</summary>
+                    <LogicFragmentList items={customFactPreview} />
+                  </details>
+                )}
+                <div className="cm-actions">
+                  <button type="button" className="cm-button" onClick={handleEvaluateCustomCase} disabled={isRuntimeBusy}>Evaluate facts with Jason</button>
+                  <button type="button" className="cm-button secondary" onClick={() => exportJson({ caseId: customCaseId, facts: customFactPreview }, `${customCaseId || 'custom-case'}.input.json`)}>Export case input</button>
+                </div>
+              </section>
+
               {runtimeTrace && (
                 <>
                   <div className="runtime-summary">
@@ -490,6 +572,7 @@ export function App() {
                       <span className="entity-label">Case</span>
                       <h3>{runtimeTrace.trace.caseId}</h3>
                       <p>{runtimeTrace.note}</p>
+                      {runtimeTrace.tracePath && <p>Trace: <code>{runtimeTrace.tracePath}</code></p>}
                     </section>
                     <section>
                       <span className="entity-label">Decision</span>

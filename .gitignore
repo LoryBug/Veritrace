@@ -39,6 +39,7 @@ output/traces/*.log
 output/plans/*.json
 output/events/*.jsonl
 output/dspy/*.json
+output/runtime/
 output/*.log
 
 # Local documentation (not tracked — gap checklist for internal use)

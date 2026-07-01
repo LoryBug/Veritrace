@@ -66,11 +66,14 @@ export type SourceSnippet = {
 }
 
 export type RuntimeTraceResponse = {
-  mode: 'expected_trace_demo'
+  mode: 'expected_trace_demo' | 'jason_live_case'
   note: string
   case: RuntimeCase
+  inputFacts?: string[]
   trace: RuntimeTrace
   sourceSnippets: SourceSnippet[]
+  outputDir?: string
+  tracePath?: string
 }
 
 export type TraceVerbalization = {
