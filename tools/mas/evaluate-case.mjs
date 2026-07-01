@@ -4,13 +4,11 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
+import { createRuntimeWorkspace, parseTrace } from './runtime-workspace.mjs'
 
 const execFileAsync = promisify(execFile)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, '../..')
-const coordinatorPath = path.join(repoRoot, 'agents/runtime_coordinator.asl')
-const caseReasonerPath = path.join(repoRoot, 'agents/case_reasoner.asl')
-const traceGuardianPath = path.join(repoRoot, 'agents/trace_guardian.asl')
 const logPropertiesPath = path.join(repoRoot, 'logging.properties')
 
 const inputPath = process.argv[2]
@@ -23,41 +21,26 @@ const input = JSON.parse(await readInput(inputPath))
 const caseId = validateCaseId(input.caseId)
 const facts = normalizeFacts(input.facts, caseId)
 const runtimeDir = path.join(repoRoot, 'output/runtime', caseId)
-const caseFactsPath = path.join(runtimeDir, 'case.asl')
+const workspaceDir = path.join(runtimeDir, 'workspace')
 const tracePath = path.join(runtimeDir, 'trace.json')
-const includePath = `output/runtime/${caseId}/case.asl`
 
-const originalCoordinator = await readFile(coordinatorPath, 'utf8')
-const originalCaseReasoner = await readFile(caseReasonerPath, 'utf8')
-const originalTraceGuardian = await readFile(traceGuardianPath, 'utf8')
+await mkdir(runtimeDir, { recursive: true })
+const workspace = await createRuntimeWorkspace({ repoRoot, workspaceDir, caseId, customFacts: facts })
+const runtimeClasspath = await resolveRuntimeClasspath()
+const run = await runJasonMas(runtimeClasspath, workspace.projectPath, repoRoot)
+const trace = parseTrace([...run.stdout.split(/\r?\n/), ...run.stderr.split(/\r?\n/)])
+if (run.timedOut) trace.humanReview.push('runtime_timeout')
 
-try {
-  await mkdir(runtimeDir, { recursive: true })
-  await writeFile(caseFactsPath, `${facts.map((fact) => `${fact}.`).join('\n')}\n`, 'utf8')
-
-  await writeFile(coordinatorPath, setCaseGoal(originalCoordinator, caseId), 'utf8')
-  await writeFile(caseReasonerPath, addCaseInclude(originalCaseReasoner, includePath), 'utf8')
-  await writeFile(traceGuardianPath, addCaseInclude(originalTraceGuardian, includePath), 'utf8')
-
-  const runtimeClasspath = await resolveRuntimeClasspath()
-  const run = await runJasonMas(runtimeClasspath)
-  const trace = parseTrace([...run.stdout.split(/\r?\n/), ...run.stderr.split(/\r?\n/)])
-  if (run.timedOut) trace.humanReview.push('runtime_timeout')
-
-  await writeFile(tracePath, `${JSON.stringify(trace, null, 2)}\n`, 'utf8')
-  process.stdout.write(`${JSON.stringify({
-    mode: 'jason_live_case',
-    caseId,
-    inputFacts: facts,
-    trace,
-    outputDir: path.relative(repoRoot, runtimeDir).replace(/\\/g, '/'),
-    tracePath: path.relative(repoRoot, tracePath).replace(/\\/g, '/'),
-  }, null, 2)}\n`)
-} finally {
-  await writeFile(coordinatorPath, originalCoordinator, 'utf8')
-  await writeFile(caseReasonerPath, originalCaseReasoner, 'utf8')
-  await writeFile(traceGuardianPath, originalTraceGuardian, 'utf8')
-}
+await writeFile(tracePath, `${JSON.stringify(trace, null, 2)}\n`, 'utf8')
+process.stdout.write(`${JSON.stringify({
+  mode: 'jason_live_case',
+  caseId,
+  inputFacts: facts,
+  trace,
+  outputDir: path.relative(repoRoot, runtimeDir).replace(/\\/g, '/'),
+  tracePath: path.relative(repoRoot, tracePath).replace(/\\/g, '/'),
+  workspaceDir: path.relative(repoRoot, workspaceDir).replace(/\\/g, '/'),
+}, null, 2)}\n`)
 
 function validateCaseId(value) {
   if (typeof value !== 'string' || !/^[a-z][A-Za-z0-9_]*$/.test(value)) {
@@ -98,16 +81,6 @@ function normalizeFact(value) {
   return fact
 }
 
-function setCaseGoal(source, caseId) {
-  return source.replace(/!evaluate_and_export\(\w+\)\./, `!evaluate_and_export(${caseId}).`)
-}
-
-function addCaseInclude(source, includePath) {
-  const includeLine = `{ include("${includePath}") }`
-  if (source.includes(includeLine)) return source
-  return source.replace(/(\{ include\("cases\/gc_gray_zone\.asl"\) \})/, `$1\n${includeLine}`)
-}
-
 async function resolveRuntimeClasspath() {
   const wrapperPath = path.join(repoRoot, process.platform === 'win32' ? 'gradlew.bat' : 'gradlew')
   const command = process.platform === 'win32' ? 'cmd.exe' : wrapperPath
@@ -123,7 +96,7 @@ async function resolveRuntimeClasspath() {
   return classpath
 }
 
-function runJasonMas(runtimeClasspath) {
+function runJasonMas(runtimeClasspath, projectPath, cwd) {
   return new Promise((resolve, reject) => {
     const child = execFile(
       'java',
@@ -132,9 +105,9 @@ function runJasonMas(runtimeClasspath) {
         '-cp',
         runtimeClasspath,
         'jason.infra.local.RunLocalMAS',
-        'cardiac_traceability.mas2j',
+        projectPath,
       ],
-      { cwd: repoRoot, timeout: 60000, maxBuffer: 1024 * 1024 * 10 },
+      { cwd, timeout: 60000, maxBuffer: 1024 * 1024 * 10 },
       (error, stdout, stderr) => {
         if (error && error.killed !== true) {
           reject(error)
@@ -147,75 +120,6 @@ function runJasonMas(runtimeClasspath) {
 
     child.on('error', reject)
   })
-}
-
-function parseTrace(lines) {
-  const trace = {
-    caseId: '',
-    risk: '',
-    decision: '',
-    activatedRules: [],
-    usedEvidence: [],
-    missingData: [],
-    sources: [],
-    nextSteps: [],
-    humanReview: [],
-  }
-  const keyMap = {
-    TRACE_CASE: 'caseId',
-    TRACE_RISK: 'risk',
-    TRACE_DECISION: 'decision',
-    TRACE_ACTIVATED_RULES: 'activatedRules',
-    TRACE_USED_EVIDENCE: 'usedEvidence',
-    TRACE_MISSING_DATA: 'missingData',
-    TRACE_SOURCES: 'sources',
-    TRACE_NEXT_STEPS: 'nextSteps',
-    TRACE_HUMAN_REVIEW: 'humanReview',
-  }
-  const listKeys = new Set(['activatedRules', 'usedEvidence', 'missingData', 'sources', 'nextSteps', 'humanReview'])
-
-  for (const line of lines) {
-    const match = line.match(/(TRACE_[A-Z_]+)=(.*)$/)
-    if (!match) continue
-
-    const [, rawKey, rawValue] = match
-    const key = keyMap[rawKey]
-    if (!key) continue
-
-    trace[key] = listKeys.has(key) ? parseJasonList(rawValue.trim()) : rawValue.trim()
-  }
-
-  return trace
-}
-
-function parseJasonList(value) {
-  if (value === '[]') return []
-  if (!value.startsWith('[') || !value.endsWith(']')) return [value]
-
-  const inner = value.slice(1, -1).trim()
-  if (!inner) return []
-
-  return splitTopLevel(inner).map((item) => item.trim().replace(/,/g, ', '))
-}
-
-function splitTopLevel(value) {
-  const items = []
-  let current = ''
-  let depth = 0
-
-  for (const char of value) {
-    if (char === '(' || char === '[') depth += 1
-    if (char === ')' || char === ']') depth -= 1
-    if (char === ',' && depth === 0) {
-      items.push(current)
-      current = ''
-      continue
-    }
-    current += char
-  }
-
-  if (current) items.push(current)
-  return items
 }
 
 function hasBalancedDelimiters(source) {
