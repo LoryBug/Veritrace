@@ -45,8 +45,9 @@ test('loads runtime trace and verbalizes it with the real LLM', async ({ page })
   await page.goto('/')
   await expectRealLlmConfigured(page)
 
+  await page.getByText('Compare with golden cases').click()
   await page.getByLabel('Golden case').selectOption('gc00')
-  await page.getByRole('button', { name: 'Load trace' }).click()
+  await page.getByRole('button', { name: 'Load golden trace' }).click()
 
   await expect(page.getByRole('heading', { name: 'insufficient_data' })).toBeVisible()
   await expect(page.getByText('Risk:')).toBeVisible()
@@ -65,9 +66,9 @@ test('evaluates custom AgentSpeak facts with the Jason runtime', async ({ page }
   await page.goto('/')
 
   await expect(page.getByText('Custom case facts')).toBeVisible()
-  await expect(page.getByText('Guided facts from approved predicates')).toBeVisible()
+  await expect(page.getByText('Optional: build facts from approved predicates')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Evaluate facts with Jason' }).click()
+  await page.getByRole('button', { name: 'Evaluate case with Jason' }).click()
 
   await expect(page.getByRole('heading', { name: 'cmr_driven_high_suspicion' })).toBeVisible({ timeout: 90_000 })
   await expect(page.getByText('Risk:')).toBeVisible()
@@ -121,7 +122,7 @@ test('approves a sample rule, promotes it, and evaluates custom facts', async ({
   })
 
   await page.goto('/')
-  await page.getByRole('button', { name: 'Load sample outputs' }).click()
+  await page.getByRole('button', { name: 'Load sample rule' }).click()
   await expect(page.getByLabel('Readable candidate rule fields')).toBeVisible()
   await expect(page.getByText('Vocabulary mapped')).toBeVisible()
 
@@ -133,7 +134,7 @@ test('approves a sample rule, promotes it, and evaluates custom facts', async ({
   await expect(page.getByText('Compilation output')).toBeVisible()
   await expect(page.getByText('Compilation completed by Playwright stub.')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Evaluate facts with Jason' }).click()
+  await page.getByRole('button', { name: 'Evaluate case with Jason' }).click()
   await expect(page.getByRole('heading', { name: 'cmr_driven_high_suspicion' })).toBeVisible({ timeout: 90_000 })
   await expect(page.locator('code').filter({ hasText: /^cmr_mass_score_above_cutoff$/ }).first()).toBeVisible()
 })

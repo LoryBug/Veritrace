@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { clearAuditEvents, compileApprovedRules, draftRule, evaluateRuntimeCase, extractClaims, fetchApprovedRules, fetchAuditEvents, fetchHealth, fetchRuntimeCases, fetchRuntimeTrace, promoteRuleToRuntime, recordAuditEvent, verbalizeTrace } from './api'
 import { isVariable, labelAtom, parseLogicFragment } from './facts'
 import { humanizeFact, humanizeMissingData, humanizeMissingDataBehavior, humanizeNextStep, humanizeReviewReason, humanizeRuleId } from './humanize'
@@ -146,6 +147,10 @@ function PredicateReviewPanel({ conditions, conclusions }: { conditions: string[
   )
 }
 
+function StepHint({ children }: { children: ReactNode }) {
+  return <p className="step-hint">{children}</p>
+}
+
 function RuleEntityCards({ rule }: { rule: CandidateRule }) {
   return (
     <div className="rule-entity-grid" aria-label="Readable candidate rule fields">
@@ -230,7 +235,10 @@ function ApprovedRuleCard({ rule, active = false }: { rule: ApprovedRuntimeRule;
       <p><strong>{rule.ruleId}</strong></p>
       <p>Source: {rule.source.sourceId}</p>
       <PredicateCoverage conditions={rule.conditions} conclusions={rule.conclusions} />
-      <p>Runtime: {rule.runtimeImplementation.activatedRuleFact}</p>
+      <details className="compact-details">
+        <summary>Runtime details</summary>
+        <p>Runtime: {rule.runtimeImplementation.activatedRuleFact}</p>
+      </details>
       {rule.artifactPath && <small>{rule.artifactPath}</small>}
     </article>
   )
@@ -518,7 +526,7 @@ export function App() {
             <div className="cm-eyebrow">Review Console</div>
             <h2 className="cm-title-xl">Document to approved symbolic rules</h2>
             <p className="cm-lead">
-              LLMs draft claims and rules. Humans approve them. Jason executes only approved rules and produces auditable traces.
+              A reviewer turns source text into approved runtime rules. Jason then evaluates case facts and returns an auditable trace.
             </p>
           </div>
           <aside className="cm-hero-side">
@@ -529,16 +537,20 @@ export function App() {
                 {llmStatus ? `${llmStatus.model} - ${llmStatus.configured ? 'configured' : 'missing API key'}` : 'Backend status pending'}
               </div>
             </div>
-            <button type="button" className="cm-button secondary" onClick={loadSampleOutputs}>Load sample outputs</button>
+            <div className="quick-start-card">
+              <strong>Fast demo path</strong>
+              <span>Load the sample, approve it, promote it, then run the default custom case.</span>
+              <button type="button" className="cm-button secondary" onClick={loadSampleOutputs}>Load sample rule</button>
+            </div>
           </aside>
         </section>
 
         <div className="cm-workflow-ribbon" aria-label="Rule authoring workflow">
           <span><b>1</b> Source</span>
-          <span><b>2</b> Claims</span>
-          <span><b>3</b> Draft Rule</span>
-          <span><b>4</b> Human Review</span>
-          <span><b>5</b> Export</span>
+          <span><b>2</b> Draft</span>
+          <span><b>3</b> Approve</span>
+          <span><b>4</b> Promote</span>
+          <span><b>5</b> Evaluate</span>
         </div>
 
         {error && <div className="cm-alert">{error}</div>}
@@ -549,7 +561,7 @@ export function App() {
               <div className="cm-card-header">
                 <div className="cm-card-title">
                   <h2>Source document</h2>
-                  <p>Paste a curated paper, policy, audit, guideline, or expert note snippet.</p>
+                  <p>Start here when using a new paper or policy. For a quick walkthrough, use the sample rule button above.</p>
                 </div>
               </div>
 
@@ -578,15 +590,18 @@ export function App() {
 
               <div className="cm-actions">
                 <button type="button" className="cm-button" onClick={handleExtractClaims} disabled={isBusy}>Extract claims with LLM</button>
-                <button type="button" className="cm-button secondary" onClick={() => exportJson({ sourceId, domain, sourceType, text: sourceText }, 'source-input.json')}>Export source JSON</button>
               </div>
+              <details className="raw-json-details">
+                <summary>Advanced: export source JSON</summary>
+                <button type="button" className="cm-button secondary" onClick={() => exportJson({ sourceId, domain, sourceType, text: sourceText }, 'source-input.json')}>Export source JSON</button>
+              </details>
             </article>
 
             <article className="cm-card">
               <div className="cm-card-header">
                 <div className="cm-card-title">
                   <h2>Extracted claims</h2>
-                  <p>Claims are not executable rules. They require review and rule drafting.</p>
+                  <p>Select the claim that should become a symbolic rule. Claims are not executable yet.</p>
                 </div>
               </div>
 
@@ -608,15 +623,20 @@ export function App() {
 
               <div className="cm-actions">
                 <button type="button" className="cm-button" onClick={handleDraftRule} disabled={isBusy || !selectedClaim}>Draft candidate rule</button>
-                <button type="button" className="cm-button secondary" onClick={() => exportJson({ sourceId, claims }, 'extracted-claims.json')} disabled={claims.length === 0}>Export claims</button>
               </div>
+              {claims.length > 0 && (
+                <details className="raw-json-details">
+                  <summary>Advanced: export claims JSON</summary>
+                  <button type="button" className="cm-button secondary" onClick={() => exportJson({ sourceId, claims }, 'extracted-claims.json')}>Export claims</button>
+                </details>
+              )}
             </article>
 
             <article className="cm-card">
               <div className="cm-card-header">
                 <div className="cm-card-title">
                   <h2>Candidate rule</h2>
-                  <p>Readable rule cards for domain review. The raw JSON remains available for audit.</p>
+                  <p>Review what the rule requires, what it produces, and whether every predicate is understandable.</p>
                 </div>
                 {candidateRule && <span className="state-pill draft">draft</span>}
               </div>
@@ -628,7 +648,7 @@ export function App() {
                   <section className="inline-review-panel" aria-label="Human review for current candidate rule">
                     <div className="cm-card-title">
                       <h2>Review this rule</h2>
-                      <p>These actions apply only to the candidate rule shown above.</p>
+                      <p>Approval makes the rule eligible for runtime promotion. It still will not run until promoted.</p>
                     </div>
                     <textarea placeholder="Review notes" value={reviewNotes} onChange={(event) => setReviewNotes(event.target.value)} rows={4} />
                     <div className="cm-actions">
@@ -652,24 +672,16 @@ export function App() {
               <div className="cm-card-header">
                 <div className="cm-card-title">
                   <h2>Runtime evaluation</h2>
-                  <p>Load a golden trace or run Jason live from generic AgentSpeak facts. No rule-specific form is required.</p>
+                  <p>Run the approved runtime on case facts. The default case is ready to evaluate.</p>
                 </div>
               </div>
 
-              <div className="runtime-controls">
-                <label>
-                  Golden case
-                  <select value={selectedRuntimeCase} onChange={(event) => setSelectedRuntimeCase(event.target.value)}>
-                    {runtimeCases.map((runtimeCase) => <option key={runtimeCase.caseId} value={runtimeCase.caseId}>{runtimeCase.label}</option>)}
-                  </select>
-                </label>
-                <button type="button" className="cm-button" onClick={handleLoadRuntimeTrace} disabled={isRuntimeBusy}>Load trace</button>
-              </div>
+              <StepHint>Recommended demo: click <strong>Evaluate case with Jason</strong>. Edit facts only if you want to try a different scenario.</StepHint>
 
               <section className="custom-case-panel" aria-label="Custom case fact evaluation">
                 <div className="cm-card-title">
                   <h2>Custom case facts</h2>
-                  <p>Paste facts for any approved-rule domain. The backend validates and runs them through Jason as runtime case input.</p>
+                  <p>These facts are domain-agnostic AgentSpeak inputs. Jason evaluates them using approved rules only.</p>
                 </div>
                 <div className="form-grid custom-case-grid">
                   <label>
@@ -677,8 +689,12 @@ export function App() {
                     <input value={customCaseId} onChange={(event) => setCustomCaseId(event.target.value)} />
                   </label>
                 </div>
+                <div className="cm-actions primary-runtime-action">
+                  <button type="button" className="cm-button" onClick={handleEvaluateCustomCase} disabled={isRuntimeBusy}>Evaluate case with Jason</button>
+                </div>
                 {guidedFactFields.length > 0 && (
-                  <div className="guided-fact-builder" aria-label="Guided fact builder">
+                  <details className="guided-fact-builder" aria-label="Guided fact builder">
+                    <summary>Optional: build facts from approved predicates</summary>
                     <span className="entity-label">Guided facts from approved predicates</span>
                     <div className="guided-fact-grid">
                       {guidedFactFields.map((field) => (
@@ -712,20 +728,36 @@ export function App() {
                     <div className="cm-actions compact-actions">
                       <button type="button" className="cm-button secondary" onClick={applyGuidedFacts}>Add guided facts to editor</button>
                     </div>
-                  </div>
+                  </details>
                 )}
-                <textarea value={customFactsText} onChange={(event) => setCustomFactsText(event.target.value)} rows={7} />
+                <details className="raw-json-details" open>
+                  <summary>Edit raw facts</summary>
+                  <textarea value={customFactsText} onChange={(event) => setCustomFactsText(event.target.value)} rows={7} />
+                </details>
                 {customFactPreview.length > 0 && (
                   <details className="raw-json-details">
                     <summary>Preview parsed facts and predicate mappings</summary>
                     <LogicFragmentList items={customFactPreview} />
                   </details>
                 )}
-                <div className="cm-actions">
-                  <button type="button" className="cm-button" onClick={handleEvaluateCustomCase} disabled={isRuntimeBusy}>Evaluate facts with Jason</button>
+                <details className="raw-json-details">
+                  <summary>Advanced: export case input</summary>
                   <button type="button" className="cm-button secondary" onClick={() => exportJson({ caseId: customCaseId, facts: customFactPreview }, `${customCaseId || 'custom-case'}.input.json`)}>Export case input</button>
-                </div>
+                </details>
               </section>
+
+              <details className="raw-json-details">
+                <summary>Compare with golden cases</summary>
+                <div className="runtime-controls">
+                  <label>
+                    Golden case
+                    <select value={selectedRuntimeCase} onChange={(event) => setSelectedRuntimeCase(event.target.value)}>
+                      {runtimeCases.map((runtimeCase) => <option key={runtimeCase.caseId} value={runtimeCase.caseId}>{runtimeCase.label}</option>)}
+                    </select>
+                  </label>
+                  <button type="button" className="cm-button secondary" onClick={handleLoadRuntimeTrace} disabled={isRuntimeBusy}>Load golden trace</button>
+                </div>
+              </details>
 
               {runtimeTrace && (
                 <>
@@ -778,7 +810,10 @@ export function App() {
 
                   <div className="cm-actions">
                     <button type="button" className="cm-button" onClick={handleVerbalizeTrace} disabled={isRuntimeBusy}>Verbalize trace with LLM</button>
-                    <button type="button" className="cm-button secondary" onClick={() => exportJson(runtimeTrace.trace, `${runtimeTrace.trace.caseId}.trace.json`)}>Export trace JSON</button>
+                    <details className="inline-details">
+                      <summary>Export</summary>
+                      <button type="button" className="cm-button secondary" onClick={() => exportJson(runtimeTrace.trace, `${runtimeTrace.trace.caseId}.trace.json`)}>Export trace JSON</button>
+                    </details>
                   </div>
                 </>
               )}
@@ -804,11 +839,14 @@ export function App() {
             <article className="cm-card">
               <div className="cm-card-title">
                 <h2>Approved runtime rules</h2>
-                <p>{approvedRules.length} approved artifacts loaded from `approved/rules`.</p>
+                <p>{approvedRules.length} approved runtime rules loaded.</p>
               </div>
-              <div className="cm-actions compact-actions">
-                <button type="button" className="cm-button" onClick={handleCompileRules} disabled={isRuntimeBusy || approvedRules.length === 0}>Generate AgentSpeak</button>
-              </div>
+              <details className="raw-json-details">
+                <summary>Advanced runtime tools</summary>
+                <div className="cm-actions compact-actions">
+                  <button type="button" className="cm-button secondary" onClick={handleCompileRules} disabled={isRuntimeBusy || approvedRules.length === 0}>Regenerate AgentSpeak</button>
+                </div>
+              </details>
               {compilationResult && (
                 <details className="raw-json-details" open>
                   <summary>Compilation output</summary>

@@ -227,6 +227,26 @@ textarea:focus-visible {
   font-size: 14px;
 }
 
+.quick-start-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--cm-line);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 16px;
+}
+
+.quick-start-card strong {
+  color: var(--cm-dark);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.quick-start-card span {
+  color: var(--cm-muted);
+  font-size: 13px;
+}
+
 .cm-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 390px;
@@ -281,6 +301,10 @@ textarea:focus-visible {
 
 .cm-actions.compact-actions {
   margin-top: 12px;
+}
+
+.primary-runtime-action {
+  margin: 14px 0 4px;
 }
 
 .cm-button {
@@ -579,6 +603,46 @@ label select {
   margin-top: 14px;
 }
 
+.raw-json-details summary,
+.compact-details summary,
+.inline-details summary,
+.guided-fact-builder summary {
+  cursor: pointer;
+  color: var(--cm-primary);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.compact-details {
+  margin-top: 4px;
+}
+
+.compact-details p {
+  margin-top: 6px;
+}
+
+.inline-details {
+  display: inline-grid;
+  align-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.inline-details .cm-button {
+  margin-top: 2px;
+}
+
+.step-hint {
+  margin: 0 0 14px;
+  border: 1px solid rgba(15, 139, 141, 0.18);
+  border-radius: 14px;
+  background: rgba(15, 139, 141, 0.07);
+  color: var(--cm-text);
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
 .inline-review-panel {
   margin-top: 16px;
   border: 1px solid rgba(15, 139, 141, 0.28);
@@ -621,6 +685,10 @@ label select {
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.72);
   padding: 14px;
+}
+
+.guided-fact-builder .entity-label {
+  margin-top: 12px;
 }
 
 .guided-fact-grid {
@@ -812,13 +880,6 @@ label select {
 .limitation-list li {
   color: var(--cm-muted);
   font-size: 13px;
-}
-
-.raw-json-details summary {
-  cursor: pointer;
-  color: var(--cm-primary);
-  font-size: 13px;
-  font-weight: 900;
 }
 
 .raw-json-details .json-panel {
