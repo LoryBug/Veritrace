@@ -11,7 +11,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test:e2e": "playwright test",
-    "test:e2e:smoke": "playwright test tests/e2e/promote-rule-api.spec.ts tests/e2e/review-console.spec.ts -g \"promotes an approved|rejects promotion|rolls back|evaluates custom AgentSpeak facts|approves a sample rule|loads a GDPR golden trace\"",
+    "test:e2e:smoke": "playwright test tests/e2e/promote-rule-api.spec.ts tests/e2e/review-console.spec.ts -g \"promotes an approved|rejects promotion|rolls back|evaluates custom AgentSpeak facts|approves a sample rule|loads a GDPR golden trace|shows demo paths|loads prepared GDPR|evaluates GDPR custom|loads approved plans\"",
     "test:e2e:headed": "playwright test --headed",
     "typecheck": "tsc --noEmit"
   },

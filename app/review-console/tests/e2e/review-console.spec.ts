@@ -41,6 +41,26 @@ test('extracts claims and drafts a candidate rule with the real LLM', async ({ p
   await expect(page.locator('.audit-event-list')).toContainText('human.rule_approved')
 })
 
+test('extracts GDPR claims and drafts a candidate rule with the real LLM', async ({ page }) => {
+  await page.goto('/')
+  await expectRealLlmConfigured(page)
+
+  await page.getByRole('button', { name: 'Load GDPR compliance source' }).click()
+  await expect(page.getByLabel('Source ID')).toHaveValue('gdpr_reg_679_2016_art_33')
+  await expect(page.getByLabel('Domain')).toHaveValue('gdpr_compliance')
+
+  await page.getByRole('button', { name: 'Extract claims with LLM' }).click()
+  await expect(page.locator('.claim-card').first()).toBeVisible({ timeout: 90_000 })
+
+  await page.getByRole('button', { name: 'Draft candidate rule' }).click()
+  await expect(page.getByLabel('Readable candidate rule fields')).toBeVisible({ timeout: 90_000 })
+  await expect(page.getByText('Draft only')).toBeVisible()
+  await expect(page.locator('.cm-alert')).toHaveCount(0)
+
+  await expect(page.locator('.audit-event-list')).toContainText('llm.claim_extraction.completed')
+  await expect(page.locator('.audit-event-list')).toContainText('llm.rule_drafting.completed')
+})
+
 test('loads runtime trace and verbalizes it with the real LLM', async ({ page }) => {
   await page.goto('/')
   await expectRealLlmConfigured(page)
@@ -75,6 +95,41 @@ test('evaluates custom AgentSpeak facts with the Jason runtime', async ({ page }
   await expect(page.getByText('Trace:')).toBeVisible()
 
   await expect(page.locator('.audit-event-list')).toContainText('runtime.custom_case_evaluation.completed')
+})
+
+test('shows demo paths and approved knowledge grouped by domain', async ({ page }) => {
+  await page.goto('/')
+
+  await expect(page.getByRole('heading', { name: 'Cardiac paper demo' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'GDPR compliance demo' })).toBeVisible()
+  await expect(page.getByText('Approved knowledge base')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'cardiac_mass' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'gdpr_compliance', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'gdpr_compliance plans' })).toBeVisible()
+  await expect(page.getByText('gdpr_breach_notification_plan').first()).toBeVisible()
+})
+
+test('loads prepared GDPR candidate without calling the LLM', async ({ page }) => {
+  await page.goto('/')
+
+  await page.getByRole('button', { name: 'Load GDPR compliance source' }).click()
+  await page.getByRole('button', { name: 'Skip LLM: load prepared candidate' }).click()
+
+  await expect(page.getByLabel('Readable candidate rule fields')).toBeVisible()
+  await expect(page.getByText('gdpr_breach_notification_overdue').first()).toBeVisible()
+  await expect(page.getByText('Draft only')).toBeVisible()
+})
+
+test('evaluates GDPR custom facts with an approved plan', async ({ page }) => {
+  await page.goto('/')
+
+  await page.getByRole('button', { name: 'Load GDPR compliance source' }).click()
+  await page.getByRole('button', { name: 'Evaluate case with Jason' }).click()
+
+  await expect(page.getByRole('heading', { name: 'gdpr_breach_notification_overdue' })).toBeVisible({ timeout: 90_000 })
+  await expect(page.locator('.runtime-summary')).toContainText('Risk: high')
+  await expect(page.locator('code').filter({ hasText: /^gdpr_breach_notification_plan$/ }).first()).toBeVisible()
+  await expect(page.locator('.trace-grid')).toContainText('Notify the competent supervisory authority.')
 })
 
 test('loads a GDPR golden trace from the runtime demo list', async ({ page }) => {

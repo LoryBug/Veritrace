@@ -115,7 +115,12 @@ app.post('/api/draft-rule', async (request, response) => {
       },
     })
     const raw = await completeJson(ruleDraftingPrompt(JSON.stringify(input, null, 2)))
-    const parsed = CandidateRuleSchema.parse(unwrapCandidateRule(raw))
+    const candidate = findCandidateRuleObject(raw)
+    const parsedResult = CandidateRuleSchema.safeParse(candidate)
+    if (!parsedResult.success) {
+      throw new Error(formatCandidateRuleError(parsedResult.error.issues, raw))
+    }
+    const parsed = parsedResult.data
     await recordAuditEvent({
       eventType: 'llm.rule_drafting.completed',
       actor: 'llm',
@@ -489,14 +494,39 @@ async function restoreArtifact(filePath: string, previousArtifact: string | null
   await writeFile(filePath, previousArtifact, 'utf8')
 }
 
-function unwrapCandidateRule(raw: unknown) {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return raw
-  const object = raw as Record<string, unknown>
-  for (const key of ['candidateRule', 'rule', 'draftRule', 'result', 'data']) {
-    const nested = object[key]
-    if (nested && typeof nested === 'object' && !Array.isArray(nested)) return nested
-  }
-  return raw
+function findCandidateRuleObject(raw: unknown) {
+  const objects = collectObjects(raw)
+  const candidate = objects.sort((a, b) => candidateRuleScore(b) - candidateRuleScore(a))[0]
+  return candidate ?? raw
+}
+
+function collectObjects(value: unknown): Array<Record<string, unknown>> {
+  if (!value || typeof value !== 'object') return []
+  if (Array.isArray(value)) return value.flatMap(collectObjects)
+
+  const object = value as Record<string, unknown>
+  return [object, ...Object.values(object).flatMap(collectObjects)]
+}
+
+function candidateRuleScore(value: Record<string, unknown>) {
+  let score = 0
+  if (typeof value.ruleId === 'string') score += 40
+  if (typeof value.domain === 'string') score += 20
+  if (typeof value.ruleType === 'string') score += 20
+  if (value.reviewStatus === 'draft') score += 20
+  if (value.approvedForRuntime === false) score += 20
+  if (value.source && typeof value.source === 'object' && !Array.isArray(value.source)) score += 20
+  if (Array.isArray(value.conditions)) score += 25
+  if (Array.isArray(value.conclusions)) score += 25
+  if (typeof value.missingDataBehavior === 'string') score += 15
+  if (value.humanReview && typeof value.humanReview === 'object' && !Array.isArray(value.humanReview)) score += 15
+  return score
+}
+
+function formatCandidateRuleError(issues: Array<{ path: PropertyKey[]; message: string }>, raw: unknown) {
+  const fields = issues.map((issue) => `${issue.path.map(String).join('.') || '<root>'}: ${issue.message}`).join('; ')
+  const topLevelKeys = raw && typeof raw === 'object' && !Array.isArray(raw) ? Object.keys(raw as Record<string, unknown>).join(', ') : typeof raw
+  return `LLM returned JSON, but not a valid candidate rule. Missing or invalid fields: ${fields}. Top-level response shape: ${topLevelKeys}. Try "Skip LLM: load prepared candidate" for the deterministic demo path, or retry claim drafting.`
 }
 
 async function exists(filePath: string) {

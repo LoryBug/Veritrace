@@ -68,26 +68,48 @@ export async function completeJson(prompt: string) {
     response_format: { type: 'json_object' },
   }
 
-  let response = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(requestBody),
-  })
+  let response = await sendWithRateLimitRetry(url, headers, requestBody)
 
   if (!response.ok) {
     const body = await response.text()
     if (response.status === 400 && body.includes('json_validate_failed')) {
-      response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ ...requestBody, response_format: undefined }),
-      })
+      response = await sendWithRateLimitRetry(url, headers, { ...requestBody, response_format: undefined })
       if (response.ok) return parseChatCompletionJson(response)
     }
     throw new Error(`LLM request failed (${response.status}): ${body}`)
   }
 
   return parseChatCompletionJson(response)
+}
+
+async function sendWithRateLimitRetry(url: string, headers: Record<string, string>, body: Record<string, unknown>) {
+  let response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  })
+
+  for (let attempt = 0; attempt < 4 && response.status === 429; attempt += 1) {
+    const responseBody = await response.text()
+    await wait(retryDelayMs(responseBody))
+    response = await fetch(url, {
+        method: 'POST',
+        headers,
+      body: JSON.stringify(body),
+    })
+  }
+
+  return response
+}
+
+function retryDelayMs(body: string) {
+  const seconds = Number(body.match(/try again in ([\d.]+)s/i)?.[1])
+  if (Number.isFinite(seconds) && seconds > 0) return Math.min(Math.ceil(seconds * 1000) + 1000, 45_000)
+  return 10_000
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 async function parseChatCompletionJson(response: Response) {

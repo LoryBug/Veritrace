@@ -34,7 +34,16 @@ test('promotes an approved reviewed rule through the API', async ({ request }) =
   const body = await response.json()
   expect(body.artifactPath).toBe(`approved/rules/${promotedRuleId}.json`)
   expect(body.compilation.generatedFiles).toContain('agents/case_reasoner_generated.asl')
+  expect(body.compilation.generatedFiles).toContain('agents/care_planner_generated.asl')
   await expectFile(promotedArtifact)
+})
+
+test('loads approved plans through the API', async ({ request }) => {
+  const response = await request.get('/api/approved-plans')
+
+  expect(response.ok(), await response.text()).toBeTruthy()
+  const body = await response.json()
+  expect(body.plans.map((plan: { planId: string }) => plan.planId)).toContain('gdpr_breach_notification_plan')
 })
 
 test('rejects promotion when the runtime artifact already exists', async ({ request }) => {
