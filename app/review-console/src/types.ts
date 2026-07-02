@@ -53,6 +53,7 @@ export type RuntimeTrace = {
   risk: string
   decision: string
   activatedRules: string[]
+  activatedPlans: string[]
   usedEvidence: string[]
   missingData: string[]
   sources: string[]
@@ -102,6 +103,32 @@ export type ApprovedRuntimeRule = {
     agentFile: string
     activatedRuleFact: string
     sourceMappingFact: string
+  }
+  validatedBy: string[]
+  limitations: string[]
+  artifactPath?: string
+}
+
+export type ApprovedRuntimePlan = {
+  planId: string
+  domain: string
+  title: string
+  reviewStatus: 'approved'
+  approvedForRuntime: true
+  source: {
+    sourceId: string
+    quote: string
+    [key: string]: unknown
+  }
+  trigger: {
+    decision: string
+  }
+  planningGoal: string
+  nextSteps: string[]
+  runtimeImplementation: {
+    agentFile: string
+    triggerFact: string
+    approvedPlanFact: string
   }
   validatedBy: string[]
   limitations: string[]

@@ -5,6 +5,7 @@
   "activatedRules": [
     "cmr_mass_score_above_cutoff"
   ],
+  "activatedPlans": [],
   "usedEvidence": [
     "score(gc04, cmr_mass_score, 5)"
   ],

@@ -5,6 +5,9 @@
   "activatedRules": [
     "gdpr_missing_legal_basis"
   ],
+  "activatedPlans": [
+    "gdpr_missing_legal_basis_plan"
+  ],
   "usedEvidence": [
     "processing(gdpr_missing_legal_basis)",
     "personal_data(gdpr_missing_legal_basis)"

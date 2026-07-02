@@ -54,6 +54,7 @@ export const TraceSchema = z.object({
   risk: z.string().min(1),
   decision: z.string().min(1),
   activatedRules: z.array(z.string()),
+  activatedPlans: z.array(z.string()).default([]),
   usedEvidence: z.array(z.string()),
   missingData: z.array(z.string()),
   sources: z.array(z.string()),
@@ -115,6 +116,30 @@ export const ApprovedRuleSchema = z.object({
     agentFile: z.string().min(1),
     activatedRuleFact: z.string().min(1),
     sourceMappingFact: z.string().min(1),
+  }),
+  validatedBy: z.array(z.string()).default([]),
+  limitations: z.array(z.string()).default([]),
+}).passthrough()
+
+export const ApprovedPlanSchema = z.object({
+  planId: z.string().min(1),
+  domain: z.string().min(1),
+  title: z.string().min(1),
+  reviewStatus: z.literal('approved'),
+  approvedForRuntime: z.literal(true),
+  source: z.object({
+    sourceId: z.string().min(1),
+    quote: z.string().min(1),
+  }).passthrough(),
+  trigger: z.object({
+    decision: z.string().min(1),
+  }),
+  planningGoal: z.string().min(1),
+  nextSteps: z.array(z.string()),
+  runtimeImplementation: z.object({
+    agentFile: z.string().min(1),
+    triggerFact: z.string().min(1),
+    approvedPlanFact: z.string().min(1),
   }),
   validatedBy: z.array(z.string()).default([]),
   limitations: z.array(z.string()).default([]),

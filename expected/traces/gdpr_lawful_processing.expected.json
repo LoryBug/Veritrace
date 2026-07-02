@@ -5,6 +5,9 @@
   "activatedRules": [
     "gdpr_lawful_processing_documented"
   ],
+  "activatedPlans": [
+    "gdpr_lawful_processing_plan"
+  ],
   "usedEvidence": [
     "legal_basis(gdpr_lawful_processing, consent)",
     "purpose_specified(gdpr_lawful_processing)",

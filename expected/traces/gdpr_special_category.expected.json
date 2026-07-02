@@ -5,6 +5,9 @@
   "activatedRules": [
     "gdpr_special_category_without_exception"
   ],
+  "activatedPlans": [
+    "gdpr_special_category_plan"
+  ],
   "usedEvidence": [
     "special_category_data(gdpr_special_category, health)"
   ],

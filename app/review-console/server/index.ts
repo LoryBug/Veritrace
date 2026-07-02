@@ -11,6 +11,7 @@ import { completeJson, publicLlmStatus } from './llm.js'
 import { claimExtractionPrompt, ruleDraftingPrompt, traceVerbalizationPrompt } from './prompts.js'
 import { ApprovedRuleSchema, CandidateRuleSchema, ClaimsResponseSchema, DraftRuleInputSchema, PromoteRuleInputSchema, RuntimeCaseFactInputSchema, SourceInputSchema, TraceSchema, TraceVerbalizationInputSchema, TraceVerbalizationOutputSchema } from './schemas.js'
 import { loadApprovedRules } from './approved-rules.js'
+import { loadApprovedPlans } from './approved-plans.js'
 import { loadRuntimeTrace, runtimeCases, sourceSnippetsFor } from './runtime-demo.js'
 
 dotenv.config()
@@ -217,6 +218,24 @@ app.post('/api/compile-rules', async (_request, response) => {
       },
     })
     response.status(500).json({ error: error instanceof Error ? error.message : 'Unable to compile approved rules' })
+  }
+})
+
+app.get('/api/approved-plans', async (_request, response) => {
+  try {
+    const plans = await loadApprovedPlans()
+    await recordAuditEvent({
+      eventType: 'runtime.approved_plans_loaded',
+      actor: 'runtime_demo',
+      status: 'success',
+      details: {
+        planCount: plans.length,
+        planIds: plans.map((plan) => plan.planId),
+      },
+    })
+    response.json({ plans })
+  } catch (error) {
+    response.status(500).json({ error: error instanceof Error ? error.message : 'Unable to load approved plans' })
   }
 })
 

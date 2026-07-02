@@ -45,7 +45,7 @@ test('loads runtime trace and verbalizes it with the real LLM', async ({ page })
   await page.goto('/')
   await expectRealLlmConfigured(page)
 
-  await page.getByText('Compare with golden cases').click()
+  await page.getByText('All golden cases').click()
   await page.getByLabel('Golden case').selectOption('gc00')
   await page.getByRole('button', { name: 'Load golden trace' }).click()
 
@@ -80,13 +80,16 @@ test('evaluates custom AgentSpeak facts with the Jason runtime', async ({ page }
 test('loads a GDPR golden trace from the runtime demo list', async ({ page }) => {
   await page.goto('/')
 
-  await page.getByText('Compare with golden cases').click()
-  await page.getByLabel('Golden case').selectOption('gdpr_breach_overdue')
-  await page.getByRole('button', { name: 'Load golden trace' }).click()
+  await page.getByRole('button', { name: 'Load GDPR compliance source' }).click()
+  await expect(page.getByLabel('Source ID')).toHaveValue('gdpr_reg_679_2016_art_33')
+  await expect(page.getByLabel('Domain')).toHaveValue('gdpr_compliance')
+  await page.getByRole('button', { name: /GDPR: breach notification overdue/ }).click()
 
   await expect(page.getByRole('heading', { name: 'gdpr_breach_notification_overdue' })).toBeVisible()
   await expect(page.locator('.runtime-summary')).toContainText('Risk: high')
   await expect(page.locator('code').filter({ hasText: /^gdpr_breach_notification_overdue$/ }).first()).toBeVisible()
+  await expect(page.getByText('Approved plans activated by this trace')).toBeVisible()
+  await expect(page.locator('code').filter({ hasText: /^gdpr_breach_notification_plan$/ }).first()).toBeVisible()
   await expect(page.locator('.audit-event-list')).toContainText('runtime.trace_loaded')
 })
 
@@ -133,7 +136,7 @@ test('approves a sample rule, promotes it, and evaluates custom facts', async ({
   })
 
   await page.goto('/')
-  await page.getByRole('button', { name: 'Load sample rule' }).click()
+  await page.locator('button', { hasText: 'Load prepared candidate' }).first().click()
   await expect(page.getByLabel('Readable candidate rule fields')).toBeVisible()
   await expect(page.getByText('Vocabulary mapped')).toBeVisible()
 

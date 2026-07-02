@@ -247,6 +247,47 @@ textarea:focus-visible {
   font-size: 13px;
 }
 
+.demo-path-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.demo-path-card,
+.benchmark-case-card,
+.knowledge-domain-card {
+  border: 1px solid var(--cm-line-glass);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 16px;
+  box-shadow: 0 14px 30px rgba(23, 59, 104, 0.08);
+}
+
+.demo-path-card.active,
+.benchmark-case-card.active {
+  border-color: rgba(15, 139, 141, 0.5);
+  background: linear-gradient(135deg, rgba(15, 139, 141, 0.1), rgba(36, 91, 148, 0.06));
+}
+
+.demo-path-card h2,
+.benchmark-panel h3,
+.knowledge-domain-card h3 {
+  margin: 0;
+  color: var(--cm-dark);
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.demo-path-card p,
+.benchmark-case-card span,
+.knowledge-domain-card span {
+  margin: 6px 0 0;
+  color: var(--cm-muted);
+  font-size: 13px;
+}
+
 .cm-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 390px;
@@ -301,6 +342,13 @@ textarea:focus-visible {
 
 .cm-actions.compact-actions {
   margin-top: 12px;
+}
+
+.source-preset-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .primary-runtime-action {
@@ -674,6 +722,70 @@ label select {
   padding: 16px;
 }
 
+.benchmark-panel {
+  border: 1px solid rgba(36, 91, 148, 0.2);
+  border-radius: 16px;
+  background: rgba(36, 91, 148, 0.05);
+  padding: 16px;
+}
+
+.benchmark-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.benchmark-case-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.benchmark-case-card {
+  cursor: pointer;
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  color: var(--cm-text);
+  text-align: left;
+}
+
+.benchmark-case-card strong {
+  color: var(--cm-primary);
+  font-size: 14px;
+}
+
+.compact-list {
+  display: grid;
+  gap: 5px;
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--cm-muted);
+  font-size: 13px;
+}
+
+.knowledge-domain-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.knowledge-domain-card {
+  padding: 14px;
+}
+
+.plan-domain-card {
+  background: rgba(15, 139, 141, 0.06);
+}
+
+.approved-plan-card p code {
+  border-radius: 7px;
+  background: rgba(15, 34, 61, 0.06);
+  padding: 2px 5px;
+}
+
 .custom-case-grid {
   grid-template-columns: minmax(0, 1fr);
   margin-top: 12px;
@@ -1004,8 +1116,10 @@ label select {
 @media (max-width: 980px) {
   .cm-hero,
   .cm-layout,
+  .demo-path-grid,
   .form-grid,
   .rule-entity-grid,
+  .benchmark-case-grid,
   .guided-fact-grid,
   .runtime-controls,
   .runtime-summary,
@@ -1016,6 +1130,10 @@ label select {
 
   .cm-sidebar {
     position: static;
+  }
+
+  .benchmark-panel-header {
+    display: grid;
   }
 }
 

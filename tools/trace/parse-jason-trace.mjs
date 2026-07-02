@@ -14,6 +14,7 @@ const keyMap = {
   TRACE_RISK: 'risk',
   TRACE_DECISION: 'decision',
   TRACE_ACTIVATED_RULES: 'activatedRules',
+  TRACE_ACTIVATED_PLANS: 'activatedPlans',
   TRACE_USED_EVIDENCE: 'usedEvidence',
   TRACE_MISSING_DATA: 'missingData',
   TRACE_SOURCES: 'sources',
@@ -23,6 +24,7 @@ const keyMap = {
 
 const listKeys = new Set([
   'activatedRules',
+  'activatedPlans',
   'usedEvidence',
   'missingData',
   'sources',
@@ -44,6 +46,7 @@ const trace = {
   risk: '',
   decision: '',
   activatedRules: [],
+  activatedPlans: [],
   usedEvidence: [],
   missingData: [],
   sources: [],

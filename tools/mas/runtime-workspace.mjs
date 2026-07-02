@@ -38,6 +38,7 @@ export function parseTrace(lines) {
     risk: '',
     decision: '',
     activatedRules: [],
+    activatedPlans: [],
     usedEvidence: [],
     missingData: [],
     sources: [],
@@ -49,13 +50,14 @@ export function parseTrace(lines) {
     TRACE_RISK: 'risk',
     TRACE_DECISION: 'decision',
     TRACE_ACTIVATED_RULES: 'activatedRules',
+    TRACE_ACTIVATED_PLANS: 'activatedPlans',
     TRACE_USED_EVIDENCE: 'usedEvidence',
     TRACE_MISSING_DATA: 'missingData',
     TRACE_SOURCES: 'sources',
     TRACE_NEXT_STEPS: 'nextSteps',
     TRACE_HUMAN_REVIEW: 'humanReview',
   }
-  const listKeys = new Set(['activatedRules', 'usedEvidence', 'missingData', 'sources', 'nextSteps', 'humanReview'])
+  const listKeys = new Set(['activatedRules', 'activatedPlans', 'usedEvidence', 'missingData', 'sources', 'nextSteps', 'humanReview'])
 
   for (const line of lines) {
     const match = line.match(/(TRACE_[A-Z_]+)=(.*)$/)

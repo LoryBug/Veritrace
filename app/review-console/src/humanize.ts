@@ -73,6 +73,10 @@ export function humanizeRuleId(ruleId: string) {
   return ruleLabels[ruleId] || `Rule ${ruleId.replace(/_/g, ' ')} was activated.`
 }
 
+export function humanizePlanId(planId: string) {
+  return `Plan ${planId.replace(/_/g, ' ')} was activated.`
+}
+
 export function humanizeMissingData(value: string) {
   return `${labelModality(value)} is missing or unavailable.`
 }

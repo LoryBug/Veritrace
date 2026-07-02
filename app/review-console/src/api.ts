@@ -1,4 +1,4 @@
-import type { ApprovedRuntimeRule, AuditEvent, CandidateRule, Claim, LlmStatus, ReviewedRule, RuleCompilationResult, RulePromotionResult, RuntimeCase, RuntimeTraceResponse, SourceSnippet, SourceType, TraceVerbalization, RuntimeTrace } from './types'
+import type { ApprovedRuntimePlan, ApprovedRuntimeRule, AuditEvent, CandidateRule, Claim, LlmStatus, ReviewedRule, RuleCompilationResult, RulePromotionResult, RuntimeCase, RuntimeTraceResponse, SourceSnippet, SourceType, TraceVerbalization, RuntimeTrace } from './types'
 
 async function parseResponse<T>(response: Response): Promise<T> {
   const body = await response.json()
@@ -47,6 +47,10 @@ export async function fetchRuntimeCases() {
 
 export async function fetchApprovedRules() {
   return parseResponse<{ rules: ApprovedRuntimeRule[] }>(await fetch('/api/approved-rules'))
+}
+
+export async function fetchApprovedPlans() {
+  return parseResponse<{ plans: ApprovedRuntimePlan[] }>(await fetch('/api/approved-plans'))
 }
 
 export async function compileApprovedRules() {

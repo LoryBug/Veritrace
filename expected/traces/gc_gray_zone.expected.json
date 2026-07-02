@@ -5,6 +5,7 @@
   "activatedRules": [
     "ct_gray_zone_without_pet"
   ],
+  "activatedPlans": [],
   "usedEvidence": [
     "ct_level(gc_gray_zone, gray_zone)",
     "unavailable(gc_gray_zone, pet)"

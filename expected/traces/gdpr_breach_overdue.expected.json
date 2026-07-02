@@ -5,6 +5,9 @@
   "activatedRules": [
     "gdpr_breach_notification_overdue"
   ],
+  "activatedPlans": [
+    "gdpr_breach_notification_plan"
+  ],
   "usedEvidence": [
     "data_breach(gdpr_breach_overdue)",
     "breach_risk(gdpr_breach_overdue, likely)",

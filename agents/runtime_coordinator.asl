@@ -19,9 +19,10 @@
 
 // Final trace export. The parser in tools/trace/parse-jason-trace.mjs consumes these lines.
 +!export_trace(Case)
-  : risk(Case, Risk) & decision(Case, Decision)
-  <- .findall(Rule, activated_rule(Case, Rule), Rules);
-     .findall(Evidence, used_evidence(Case, Evidence), EvidenceList);
+      : risk(Case, Risk) & decision(Case, Decision)
+   <- .findall(Rule, activated_rule(Case, Rule), Rules);
+      .findall(Plan, activated_plan(Case, Plan), Plans);
+      .findall(Evidence, used_evidence(Case, Evidence), EvidenceList);
      .findall(Missing, missing_data(Case, Missing), MissingData);
      .findall(Source, source_trace(Case, Source), Sources);
      .findall(NextStep, next_step(Case, NextStep), NextSteps);
@@ -29,9 +30,10 @@
      .print("TRACE_EXPORT_BEGIN");
      .print("TRACE_CASE=", Case);
      .print("TRACE_RISK=", Risk);
-     .print("TRACE_DECISION=", Decision);
-     .print("TRACE_ACTIVATED_RULES=", Rules);
-     .print("TRACE_USED_EVIDENCE=", EvidenceList);
+      .print("TRACE_DECISION=", Decision);
+      .print("TRACE_ACTIVATED_RULES=", Rules);
+      .print("TRACE_ACTIVATED_PLANS=", Plans);
+      .print("TRACE_USED_EVIDENCE=", EvidenceList);
      .print("TRACE_MISSING_DATA=", MissingData);
      .print("TRACE_SOURCES=", Sources);
      .print("TRACE_NEXT_STEPS=", NextSteps);

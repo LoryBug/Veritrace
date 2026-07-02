@@ -112,6 +112,7 @@ Open `http://127.0.0.1:5173`. The backend runs on port `8787`.
 
 Main review-console flows:
 
+- choose a visible demo path: Cardiac paper, GDPR compliance, runtime benchmark, or approved knowledge inspection;
 - paste a paper/policy/guideline snippet and extract claims with the configured LLM;
 - draft a candidate symbolic rule from a selected claim;
 - review predicate mappings and raw AgentSpeak-compatible fragments;
@@ -123,6 +124,13 @@ Main review-console flows:
 - verbalize a trace with a constrained LLM prompt.
 
 If a promoted runtime artifact already exists, the UI asks before overwriting it. Promotion writes the approved JSON artifact, recompiles AgentSpeak, validates the generated runtime files, and rolls back the artifact if compilation fails.
+
+UI demo tips:
+
+- click **Load GDPR compliance source** to switch the source-authoring form from the Paolisso cardiac paper snippet to GDPR Article 33 text;
+- click a GDPR benchmark card, for example **GDPR: breach notification overdue**, to inspect the approved runtime trace;
+- inspect **Approved knowledge base** to see approved rules and approved plans grouped by domain;
+- in a trace, **Activated rules** explain why a decision was reached, while **Activated plans** explain where the next steps came from.
 
 ## Approved Plan Pipeline
 

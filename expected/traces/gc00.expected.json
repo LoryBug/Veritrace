@@ -5,6 +5,7 @@
   "activatedRules": [
     "critical_data_missing"
   ],
+  "activatedPlans": [],
   "usedEvidence": [],
   "missingData": [
     "echo",

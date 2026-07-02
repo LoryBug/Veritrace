@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { clearAuditEvents, compileApprovedRules, draftRule, evaluateRuntimeCase, extractClaims, fetchApprovedRules, fetchAuditEvents, fetchHealth, fetchRuntimeCases, fetchRuntimeTrace, promoteRuleToRuntime, recordAuditEvent, verbalizeTrace } from './api'
+import { clearAuditEvents, compileApprovedRules, draftRule, evaluateRuntimeCase, extractClaims, fetchApprovedPlans, fetchApprovedRules, fetchAuditEvents, fetchHealth, fetchRuntimeCases, fetchRuntimeTrace, promoteRuleToRuntime, recordAuditEvent, verbalizeTrace } from './api'
 import { isVariable, labelAtom, parseLogicFragment } from './facts'
-import { humanizeFact, humanizeMissingData, humanizeMissingDataBehavior, humanizeNextStep, humanizeReviewReason, humanizeRuleId } from './humanize'
+import { humanizeFact, humanizeMissingData, humanizeMissingDataBehavior, humanizeNextStep, humanizePlanId, humanizeReviewReason, humanizeRuleId } from './humanize'
 import { explainFragment, getPredicateDefinition } from './predicate-vocabulary'
-import { sampleCandidateRule, sampleClaims, sampleSource } from './sample-data'
-import type { ApprovedRuntimeRule, AuditEvent, CandidateRule, Claim, LlmStatus, ReviewedRule, RuleCompilationResult, RuntimeCase, RuntimeTraceResponse, SourceType, TraceVerbalization } from './types'
+import { demoPresets, sampleSource } from './sample-data'
+import type { ApprovedRuntimePlan, ApprovedRuntimeRule, AuditEvent, CandidateRule, Claim, LlmStatus, ReviewedRule, RuleCompilationResult, RuntimeCase, RuntimeTraceResponse, SourceType, TraceVerbalization } from './types'
 
 type ReviewStatus = ReviewedRule['reviewStatus']
 
@@ -17,16 +17,16 @@ const canonicalConcepts = [
   'decision(Case, Decision)',
   'activated_rule(Case, RuleId)',
   'requires_human_review(Case, Reason)',
+  'processing(Case)',
+  'personal_data(Case)',
+  'legal_basis(Case, Basis)',
+  'data_breach(Case)',
+  'breach_risk(Case, Level)',
+  'breach_hours_since_awareness(Case, Hours)',
+  'notified_authority(Case)',
 ]
 
-const defaultCustomFacts = [
-  'case(user_case_001).',
-  'unavailable(user_case_001, echo).',
-  'available(user_case_001, cmr).',
-  'unavailable(user_case_001, ct_pet).',
-  'unavailable(user_case_001, pet).',
-  'score(user_case_001, cmr_mass_score, 5).',
-].join('\n')
+const defaultPreset = demoPresets[0]
 
 function parseFactInput(value: string) {
   return value
@@ -244,6 +244,33 @@ function ApprovedRuleCard({ rule, active = false }: { rule: ApprovedRuntimeRule;
   )
 }
 
+function ApprovedPlanCard({ plan, active = false }: { plan: ApprovedRuntimePlan; active?: boolean }) {
+  return (
+    <article className={active ? 'approved-rule-card active approved-plan-card' : 'approved-rule-card approved-plan-card'}>
+      <span className="state-pill approved">approved plan</span>
+      <h3>{plan.title}</h3>
+      <p><strong>{plan.planId}</strong></p>
+      <p>When decision is <code>{plan.trigger.decision}</code>, emit goal <code>{plan.planningGoal}</code>.</p>
+      <ul className="compact-list">
+        {plan.nextSteps.map((step) => <li key={step}>{humanizeNextStep(step)}</li>)}
+      </ul>
+      <details className="compact-details">
+        <summary>Plan details</summary>
+        <p>Source: {plan.source.sourceId}</p>
+        <p>Runtime: {plan.runtimeImplementation.approvedPlanFact}</p>
+      </details>
+      {plan.artifactPath && <small>{plan.artifactPath}</small>}
+    </article>
+  )
+}
+
+function groupByDomain<T extends { domain: string }>(items: T[]) {
+  return items.reduce<Record<string, T[]>>((groups, item) => {
+    groups[item.domain] = groups[item.domain] ? [...groups[item.domain], item] : [item]
+    return groups
+  }, {})
+}
+
 function AuditTrail({ events, onRefresh, onClear }: { events: AuditEvent[]; onRefresh: () => void; onClear: () => void }) {
   return (
     <article className="cm-card audit-trail-card">
@@ -272,6 +299,7 @@ function AuditTrail({ events, onRefresh, onClear }: { events: AuditEvent[]; onRe
 }
 
 export function App() {
+  const [activeDemoId, setActiveDemoId] = useState(defaultPreset.id)
   const [sourceId, setSourceId] = useState(sampleSource.sourceId)
   const [domain, setDomain] = useState(sampleSource.domain)
   const [sourceType, setSourceType] = useState<SourceType>(sampleSource.sourceType)
@@ -284,9 +312,10 @@ export function App() {
   const [llmStatus, setLlmStatus] = useState<LlmStatus | null>(null)
   const [runtimeCases, setRuntimeCases] = useState<RuntimeCase[]>([])
   const [approvedRules, setApprovedRules] = useState<ApprovedRuntimeRule[]>([])
+  const [approvedPlans, setApprovedPlans] = useState<ApprovedRuntimePlan[]>([])
   const [selectedRuntimeCase, setSelectedRuntimeCase] = useState('gc04')
-  const [customCaseId, setCustomCaseId] = useState('user_case_001')
-  const [customFactsText, setCustomFactsText] = useState(defaultCustomFacts)
+  const [customCaseId, setCustomCaseId] = useState(defaultPreset.customCaseId)
+  const [customFactsText, setCustomFactsText] = useState(defaultPreset.customFacts)
   const [guidedFactValues, setGuidedFactValues] = useState<Record<string, string>>({})
   const [runtimeTrace, setRuntimeTrace] = useState<RuntimeTraceResponse | null>(null)
   const [traceVerbalization, setTraceVerbalization] = useState<TraceVerbalization | null>(null)
@@ -306,6 +335,9 @@ export function App() {
     fetchApprovedRules()
       .then((result) => setApprovedRules(result.rules))
       .catch((err: Error) => setError(err.message))
+    fetchApprovedPlans()
+      .then((result) => setApprovedPlans(result.plans))
+      .catch((err: Error) => setError(err.message))
     refreshAuditEvents()
   }, [])
 
@@ -315,6 +347,13 @@ export function App() {
   const activeApprovedRules = runtimeTrace
     ? approvedRules.filter((rule) => runtimeTrace.trace.activatedRules.includes(rule.ruleId))
     : []
+  const activeApprovedPlans = runtimeTrace
+    ? approvedPlans.filter((plan) => runtimeTrace.trace.activatedPlans.includes(plan.planId))
+    : []
+  const rulesByDomain = groupByDomain(approvedRules)
+  const plansByDomain = groupByDomain(approvedPlans)
+  const activeDemo = demoPresets.find((preset) => preset.id === activeDemoId) ?? defaultPreset
+  const activeDemoRuntimeCases = runtimeCases.filter((runtimeCase) => activeDemo.benchmarkCaseIds.includes(runtimeCase.caseId))
 
   async function handleExtractClaims() {
     setIsBusy(true)
@@ -351,11 +390,31 @@ export function App() {
     }
   }
 
-  function loadSampleOutputs() {
-    setClaims(sampleClaims)
-    setSelectedClaimId(sampleClaims[0].claimId)
-    setCandidateRule(sampleCandidateRule)
+  function loadSourcePreset(presetId: typeof activeDemoId) {
+    const preset = demoPresets.find((item) => item.id === presetId) ?? defaultPreset
+    setActiveDemoId(preset.id)
+    setSourceId(preset.source.sourceId)
+    setDomain(preset.source.domain)
+    setSourceType(preset.source.sourceType)
+    setSourceText(preset.source.text)
+    setClaims([])
+    setSelectedClaimId('')
+    setCandidateRule(null)
+    setReviewNotes('')
+    setCustomCaseId(preset.customCaseId)
+    setCustomFactsText(preset.customFacts)
+    setSelectedRuntimeCase(preset.benchmarkCaseIds[0])
+    setRuntimeTrace(null)
+    setTraceVerbalization(null)
     setError(null)
+  }
+
+  function loadPreparedCandidate(presetId = activeDemoId) {
+    const preset = demoPresets.find((item) => item.id === presetId) ?? defaultPreset
+    loadSourcePreset(preset.id)
+    setClaims(preset.claims)
+    setSelectedClaimId(preset.claims[0].claimId)
+    setCandidateRule(preset.candidateRule)
   }
 
   async function reviewCandidate(status: ReviewStatus) {
@@ -393,12 +452,13 @@ export function App() {
     URL.revokeObjectURL(url)
   }
 
-  async function handleLoadRuntimeTrace() {
+  async function handleLoadRuntimeTrace(caseId = selectedRuntimeCase) {
     setIsRuntimeBusy(true)
     setError(null)
     setTraceVerbalization(null)
     try {
-      setRuntimeTrace(await fetchRuntimeTrace(selectedRuntimeCase))
+      setSelectedRuntimeCase(caseId)
+      setRuntimeTrace(await fetchRuntimeTrace(caseId))
       await refreshAuditEvents()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load runtime trace')
@@ -469,6 +529,8 @@ export function App() {
       setCompilationResult(await compileApprovedRules())
       const result = await fetchApprovedRules()
       setApprovedRules(result.rules)
+      const plans = await fetchApprovedPlans()
+      setApprovedPlans(plans.plans)
       await refreshAuditEvents()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to compile approved rules')
@@ -485,6 +547,8 @@ export function App() {
       setCompilationResult(result.compilation)
       const approved = await fetchApprovedRules()
       setApprovedRules(approved.rules)
+      const plans = await fetchApprovedPlans()
+      setApprovedPlans(plans.plans)
       await refreshAuditEvents()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to promote rule to runtime'
@@ -494,6 +558,8 @@ export function App() {
           setCompilationResult(result.compilation)
           const approved = await fetchApprovedRules()
           setApprovedRules(approved.rules)
+          const plans = await fetchApprovedPlans()
+          setApprovedPlans(plans.plans)
           await refreshAuditEvents()
           return
         } catch (overwriteErr) {
@@ -524,9 +590,9 @@ export function App() {
         <section className="cm-hero">
           <div className="cm-hero-main">
             <div className="cm-eyebrow">Review Console</div>
-            <h2 className="cm-title-xl">Document to approved symbolic rules</h2>
+            <h2 className="cm-title-xl">Choose a demo path, then inspect the trace</h2>
             <p className="cm-lead">
-              A reviewer turns source text into approved runtime rules. Jason then evaluates case facts and returns an auditable trace.
+              Author rules from source text, run approved cardiac or GDPR benchmarks, and inspect the symbolic rules and plans Jason executes.
             </p>
           </div>
           <aside className="cm-hero-side">
@@ -538,11 +604,25 @@ export function App() {
               </div>
             </div>
             <div className="quick-start-card">
-              <strong>Fast demo path</strong>
-              <span>Load the sample, approve it, promote it, then run the default custom case.</span>
-              <button type="button" className="cm-button secondary" onClick={loadSampleOutputs}>Load sample rule</button>
+              <strong>Current path: {activeDemo.label}</strong>
+              <span>Use a source preset for LLM authoring, or load a prepared candidate for a fast review walkthrough.</span>
+              <button type="button" className="cm-button secondary" onClick={() => loadPreparedCandidate(activeDemo.id)}>Load prepared candidate</button>
             </div>
           </aside>
+        </section>
+
+        <section className="demo-path-grid" aria-label="Choose demo path">
+          {demoPresets.map((preset) => (
+            <article key={preset.id} className={preset.id === activeDemoId ? 'demo-path-card active' : 'demo-path-card'}>
+              <span className="entity-label">{preset.domainLabel}</span>
+              <h2>{preset.label}</h2>
+              <p>{preset.id === 'gdpr' ? 'Use GDPR Article 33 source text, then run compliance benchmark traces.' : 'Use the cardiac mass paper snippet, then run clinical benchmark traces.'}</p>
+              <div className="cm-actions compact-actions">
+                <button type="button" className="cm-button" onClick={() => loadSourcePreset(preset.id)}>Load source</button>
+                <button type="button" className="cm-button secondary" onClick={() => loadPreparedCandidate(preset.id)}>Load prepared candidate</button>
+              </div>
+            </article>
+          ))}
         </section>
 
         <div className="cm-workflow-ribbon" aria-label="Rule authoring workflow">
@@ -561,8 +641,16 @@ export function App() {
               <div className="cm-card-header">
                 <div className="cm-card-title">
                   <h2>Source document</h2>
-                  <p>Start here when using a new paper or policy. For a quick walkthrough, use the sample rule button above.</p>
+                  <p>This is the authoring path: choose a source, extract claims, draft a rule, then human-review it before runtime promotion.</p>
                 </div>
+              </div>
+
+              <div className="source-preset-strip" aria-label="Source presets">
+                {demoPresets.map((preset) => (
+                  <button key={preset.id} type="button" className="cm-button secondary" onClick={() => loadSourcePreset(preset.id)}>
+                    Load {preset.domainLabel} source
+                  </button>
+                ))}
               </div>
 
               <div className="form-grid">
@@ -590,6 +678,7 @@ export function App() {
 
               <div className="cm-actions">
                 <button type="button" className="cm-button" onClick={handleExtractClaims} disabled={isBusy}>Extract claims with LLM</button>
+                <button type="button" className="cm-button secondary" onClick={() => loadPreparedCandidate(activeDemo.id)}>Skip LLM: load prepared candidate</button>
               </div>
               <details className="raw-json-details">
                 <summary>Advanced: export source JSON</summary>
@@ -672,11 +761,35 @@ export function App() {
               <div className="cm-card-header">
                 <div className="cm-card-title">
                   <h2>Runtime evaluation</h2>
-                  <p>Run the approved runtime on case facts. The default case is ready to evaluate.</p>
+                  <p>Run already-approved rules and plans. Use benchmark cards for the prepared cardiac/GDPR traces, or edit facts for a live custom Jason run.</p>
                 </div>
               </div>
 
-              <StepHint>Recommended demo: click <strong>Evaluate case with Jason</strong>. Edit facts only if you want to try a different scenario.</StepHint>
+              <StepHint>Recommended demo: choose a benchmark card. The trace shows activated rules, activated plans, evidence, sources, and next steps.</StepHint>
+
+              <section className="benchmark-panel" aria-label="Runtime benchmark cases">
+                <div className="benchmark-panel-header">
+                  <div>
+                    <span className="entity-label">Benchmark cases</span>
+                    <h3>{activeDemo.domainLabel}</h3>
+                  </div>
+                  <div className="cm-actions compact-actions">
+                    {demoPresets.map((preset) => (
+                      <button key={preset.id} type="button" className={preset.id === activeDemoId ? 'cm-button' : 'cm-button secondary'} onClick={() => loadSourcePreset(preset.id)}>
+                        {preset.domainLabel}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="benchmark-case-grid">
+                  {activeDemoRuntimeCases.map((runtimeCase) => (
+                    <button key={runtimeCase.caseId} type="button" className={runtimeCase.caseId === selectedRuntimeCase ? 'benchmark-case-card active' : 'benchmark-case-card'} onClick={() => handleLoadRuntimeTrace(runtimeCase.caseId)} disabled={isRuntimeBusy}>
+                      <strong>{runtimeCase.label}</strong>
+                      <span>{runtimeCase.caseId.startsWith('gdpr') ? 'GDPR rules + approved compliance plan' : 'Cardiac rules + MAS planning baseline'}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
 
               <section className="custom-case-panel" aria-label="Custom case fact evaluation">
                 <div className="cm-card-title">
@@ -747,7 +860,7 @@ export function App() {
               </section>
 
               <details className="raw-json-details">
-                <summary>Compare with golden cases</summary>
+                <summary>All golden cases</summary>
                 <div className="runtime-controls">
                   <label>
                     Golden case
@@ -755,7 +868,7 @@ export function App() {
                       {runtimeCases.map((runtimeCase) => <option key={runtimeCase.caseId} value={runtimeCase.caseId}>{runtimeCase.label}</option>)}
                     </select>
                   </label>
-                  <button type="button" className="cm-button secondary" onClick={handleLoadRuntimeTrace} disabled={isRuntimeBusy}>Load golden trace</button>
+                  <button type="button" className="cm-button secondary" onClick={() => handleLoadRuntimeTrace()} disabled={isRuntimeBusy}>Load golden trace</button>
                 </div>
               </details>
 
@@ -777,6 +890,7 @@ export function App() {
 
                   <div className="trace-grid">
                     <TraceList title="Activated rules" items={runtimeTrace.trace.activatedRules} humanize={humanizeRuleId} />
+                    <TraceList title="Activated plans" items={runtimeTrace.trace.activatedPlans} humanize={humanizePlanId} />
                     <TraceList title="Used evidence" items={runtimeTrace.trace.usedEvidence} humanize={humanizeFact} />
                     <TraceList title="Missing data" items={runtimeTrace.trace.missingData} humanize={humanizeMissingData} />
                     <TraceList title="Next steps" items={runtimeTrace.trace.nextSteps} humanize={humanizeNextStep} />
@@ -804,6 +918,20 @@ export function App() {
                     ) : (
                       <div className="approved-rule-grid compact">
                         {activeApprovedRules.map((rule) => <ApprovedRuleCard key={rule.ruleId} rule={rule} active />)}
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="activated-approved-rules">
+                    <div className="cm-card-title">
+                      <h2>Approved plans activated by this trace</h2>
+                      <p>Plans explain where the next steps come from after a symbolic decision.</p>
+                    </div>
+                    {activeApprovedPlans.length === 0 ? (
+                      <p className="empty-state">No approved plan artifact matched this trace.</p>
+                    ) : (
+                      <div className="approved-rule-grid compact">
+                        {activeApprovedPlans.map((plan) => <ApprovedPlanCard key={plan.planId} plan={plan} active />)}
                       </div>
                     )}
                   </section>
@@ -838,8 +966,8 @@ export function App() {
           <aside className="cm-sidebar">
             <article className="cm-card">
               <div className="cm-card-title">
-                <h2>Approved runtime rules</h2>
-                <p>{approvedRules.length} approved runtime rules loaded.</p>
+                <h2>Approved knowledge base</h2>
+                <p>{approvedRules.length} rules and {approvedPlans.length} plans loaded. Runtime uses only approved symbolic artifacts.</p>
               </div>
               <details className="raw-json-details">
                 <summary>Advanced runtime tools</summary>
@@ -855,13 +983,36 @@ export function App() {
                   {compilationResult.stderr && <pre className="json-panel">{compilationResult.stderr}</pre>}
                 </details>
               )}
-              <div className="approved-rule-grid sidebar-rules">
-                {approvedRules.map((rule) => (
-                  <ApprovedRuleCard
-                    key={rule.ruleId}
-                    rule={rule}
-                    active={runtimeTrace?.trace.activatedRules.includes(rule.ruleId) ?? false}
-                  />
+              <div className="knowledge-domain-list">
+                {Object.entries(rulesByDomain).map(([domainName, rules]) => (
+                  <section key={domainName} className="knowledge-domain-card">
+                    <h3>{domainName}</h3>
+                    <span>{rules.length} approved rules</span>
+                    <div className="approved-rule-grid sidebar-rules">
+                      {rules.map((rule) => (
+                        <ApprovedRuleCard
+                          key={rule.ruleId}
+                          rule={rule}
+                          active={runtimeTrace?.trace.activatedRules.includes(rule.ruleId) ?? false}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                ))}
+                {Object.entries(plansByDomain).map(([domainName, plans]) => (
+                  <section key={`${domainName}-plans`} className="knowledge-domain-card plan-domain-card">
+                    <h3>{domainName} plans</h3>
+                    <span>{plans.length} approved plans</span>
+                    <div className="approved-rule-grid sidebar-rules">
+                      {plans.map((plan) => (
+                        <ApprovedPlanCard
+                          key={plan.planId}
+                          plan={plan}
+                          active={runtimeTrace?.trace.activatedPlans.includes(plan.planId) ?? false}
+                        />
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
             </article>
