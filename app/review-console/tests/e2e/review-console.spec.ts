@@ -50,8 +50,7 @@ test('loads runtime trace and verbalizes it with the real LLM', async ({ page })
   await page.getByRole('button', { name: 'Load golden trace' }).click()
 
   await expect(page.getByRole('heading', { name: 'insufficient_data' })).toBeVisible()
-  await expect(page.getByText('Risk:')).toBeVisible()
-  await expect(page.getByText('unknown', { exact: true })).toBeVisible()
+  await expect(page.locator('.runtime-summary')).toContainText('Risk: unknown')
   await expect(page.locator('code').filter({ hasText: /^critical_data_missing$/ }).first()).toBeVisible()
 
   await page.getByRole('button', { name: 'Verbalize trace with LLM' }).click()
@@ -71,12 +70,24 @@ test('evaluates custom AgentSpeak facts with the Jason runtime', async ({ page }
   await page.getByRole('button', { name: 'Evaluate case with Jason' }).click()
 
   await expect(page.getByRole('heading', { name: 'cmr_driven_high_suspicion' })).toBeVisible({ timeout: 90_000 })
-  await expect(page.getByText('Risk:')).toBeVisible()
-  await expect(page.getByText('high', { exact: true })).toBeVisible()
+  await expect(page.locator('.runtime-summary')).toContainText('Risk: high')
   await expect(page.locator('code').filter({ hasText: /^cmr_mass_score_above_cutoff$/ }).first()).toBeVisible()
   await expect(page.getByText('Trace:')).toBeVisible()
 
   await expect(page.locator('.audit-event-list')).toContainText('runtime.custom_case_evaluation.completed')
+})
+
+test('loads a GDPR golden trace from the runtime demo list', async ({ page }) => {
+  await page.goto('/')
+
+  await page.getByText('Compare with golden cases').click()
+  await page.getByLabel('Golden case').selectOption('gdpr_breach_overdue')
+  await page.getByRole('button', { name: 'Load golden trace' }).click()
+
+  await expect(page.getByRole('heading', { name: 'gdpr_breach_notification_overdue' })).toBeVisible()
+  await expect(page.locator('.runtime-summary')).toContainText('Risk: high')
+  await expect(page.locator('code').filter({ hasText: /^gdpr_breach_notification_overdue$/ }).first()).toBeVisible()
+  await expect(page.locator('.audit-event-list')).toContainText('runtime.trace_loaded')
 })
 
 test('approves a sample rule, promotes it, and evaluates custom facts', async ({ page }) => {

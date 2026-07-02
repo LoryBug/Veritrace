@@ -20,6 +20,26 @@ export const runtimeCases = [
     label: 'GC-GRAY-ZONE: CT gray zone without PET parameters',
     expectedTracePath: 'expected/traces/gc_gray_zone.expected.json',
   },
+  {
+    caseId: 'gdpr_lawful_processing',
+    label: 'GDPR: lawful processing documented',
+    expectedTracePath: 'expected/traces/gdpr_lawful_processing.expected.json',
+  },
+  {
+    caseId: 'gdpr_missing_legal_basis',
+    label: 'GDPR: missing legal basis',
+    expectedTracePath: 'expected/traces/gdpr_missing_legal_basis.expected.json',
+  },
+  {
+    caseId: 'gdpr_special_category',
+    label: 'GDPR: special-category data without exception',
+    expectedTracePath: 'expected/traces/gdpr_special_category.expected.json',
+  },
+  {
+    caseId: 'gdpr_breach_overdue',
+    label: 'GDPR: breach notification overdue',
+    expectedTracePath: 'expected/traces/gdpr_breach_overdue.expected.json',
+  },
 ] as const
 
 const sourceSnippetMap: Record<string, string> = {
@@ -28,6 +48,9 @@ const sourceSnippetMap: Record<string, string> = {
   dangelo_2020_ct_pet: 'Cardiac CT suspicious signs and 18F-FDG PET/CT thresholds support CT/PET pathway interpretation.',
   angeli_2022_multimodality_context: 'Multimodality evaluation supports integrated interpretation, discordance review, and Heart Team discussion.',
   local_safety_behavior: 'Missing data and discordance are surfaced explicitly instead of being treated as negative evidence.',
+  gdpr_reg_679_2016_art_6: 'GDPR Article 6 requires at least one lawful basis for personal-data processing.',
+  gdpr_reg_679_2016_art_9: 'GDPR Article 9 prohibits special-category data processing unless a listed exception applies.',
+  gdpr_reg_679_2016_art_33: 'GDPR Article 33 requires supervisory-authority notification without undue delay and, where feasible, within 72 hours unless risk is unlikely.',
 }
 
 export function sourceSnippetsFor(sourceIds: string[]) {

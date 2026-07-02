@@ -1,0 +1,46 @@
+{
+  "ruleId": "gdpr_missing_legal_basis",
+  "domain": "gdpr_compliance",
+  "title": "GDPR processing without documented legal basis",
+  "ruleType": "compliance_guard",
+  "reviewStatus": "approved",
+  "approvedForRuntime": true,
+  "reviewedBy": "project_reviewer",
+  "reviewDate": "2026-07-02",
+  "source": {
+    "sourceId": "gdpr_reg_679_2016_art_6",
+    "type": "regulation",
+    "status": "verified_nse",
+    "quote": "The processing is lawful only if and to the extent that at least one of the listed conditions applies."
+  },
+  "conditions": [
+    "processing(Case)",
+    "personal_data(Case)",
+    "not legal_basis(Case, Basis)"
+  ],
+  "conclusions": [
+    "risk(Case, high)",
+    "decision(Case, gdpr_missing_legal_basis)",
+    "activated_rule(Case, gdpr_missing_legal_basis)"
+  ],
+  "usedEvidence": [
+    "processing(Case)",
+    "personal_data(Case)"
+  ],
+  "missingDataBehavior": "require_human_review",
+  "compilation": {
+    "priority": 10
+  },
+  "runtimeImplementation": {
+    "agentFile": "agents/case_reasoner.asl",
+    "activatedRuleFact": "activated_rule(Case, gdpr_missing_legal_basis)",
+    "sourceMappingFact": "source_for_rule(gdpr_missing_legal_basis, gdpr_reg_679_2016_art_6)"
+  },
+  "validatedBy": [
+    "expected/traces/gdpr_missing_legal_basis.expected.json"
+  ],
+  "limitations": [
+    "Absence of a legal_basis fact means absence from the encoded case, not proof that no lawful basis exists in reality.",
+    "A reviewer must confirm the factual record before relying on this compliance flag."
+  ]
+}

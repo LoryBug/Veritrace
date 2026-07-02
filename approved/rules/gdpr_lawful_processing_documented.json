@@ -1,0 +1,49 @@
+{
+  "ruleId": "gdpr_lawful_processing_documented",
+  "domain": "gdpr_compliance",
+  "title": "GDPR lawful processing basis documented",
+  "ruleType": "compliance_confirmation",
+  "reviewStatus": "approved",
+  "approvedForRuntime": true,
+  "reviewedBy": "project_reviewer",
+  "reviewDate": "2026-07-02",
+  "source": {
+    "sourceId": "gdpr_reg_679_2016_art_6",
+    "type": "regulation",
+    "status": "verified_nse",
+    "quote": "The processing is lawful only if and to the extent that at least one condition applies, including consent, contract, legal obligation, vital interests, public task, or legitimate interests."
+  },
+  "conditions": [
+    "processing(Case)",
+    "personal_data(Case)",
+    "legal_basis(Case, Basis)",
+    "purpose_specified(Case)",
+    "transparency_notice(Case)"
+  ],
+  "conclusions": [
+    "risk(Case, low)",
+    "decision(Case, gdpr_lawful_processing_documented)",
+    "activated_rule(Case, gdpr_lawful_processing_documented)"
+  ],
+  "usedEvidence": [
+    "legal_basis(Case, Basis)",
+    "purpose_specified(Case)",
+    "transparency_notice(Case)"
+  ],
+  "missingDataBehavior": "do_not_assume_negative",
+  "compilation": {
+    "priority": 80
+  },
+  "runtimeImplementation": {
+    "agentFile": "agents/case_reasoner.asl",
+    "activatedRuleFact": "activated_rule(Case, gdpr_lawful_processing_documented)",
+    "sourceMappingFact": "source_for_rule(gdpr_lawful_processing_documented, gdpr_reg_679_2016_art_6)"
+  },
+  "validatedBy": [
+    "expected/traces/gdpr_lawful_processing.expected.json"
+  ],
+  "limitations": [
+    "This demo rule checks only that a documented basis and basic transparency facts are present; it is not a full legal assessment.",
+    "The rule does not validate whether a claimed legal basis is substantively correct for the processing context."
+  ]
+}

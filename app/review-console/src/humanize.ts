@@ -21,6 +21,10 @@ const decisionLabels: Record<string, string> = {
   concordant_high_suspicion_echo_cmr: 'Echocardiography and CMR are concordant for high suspicion.',
   significant_echocardiographic_suspicion: 'Echocardiography shows significant suspicion and second-level imaging is needed.',
   low_suspicion_with_available_data: 'No encoded cutoff is exceeded among the available data.',
+  gdpr_lawful_processing_documented: 'The processing activity has a documented GDPR legal basis and basic transparency facts.',
+  gdpr_missing_legal_basis: 'The processing activity is missing an encoded GDPR legal basis.',
+  gdpr_special_category_without_exception: 'Special-category data are processed without an encoded Article 9 exception.',
+  gdpr_breach_notification_overdue: 'A likely-risk personal-data breach appears overdue for supervisory-authority notification.',
 }
 
 const ruleLabels: Record<string, string> = {
@@ -30,6 +34,10 @@ const ruleLabels: Record<string, string> = {
   dem_score_above_cutoff: 'DEM Score reached the approved cutoff rule.',
   concordant_echo_cmr_high_suspicion: 'Echo and CMR rules point to concordant high suspicion.',
   no_cutoff_exceeded: 'No approved cutoff rule was exceeded among available data.',
+  gdpr_lawful_processing_documented: 'GDPR lawful-processing documentation rule was satisfied.',
+  gdpr_missing_legal_basis: 'GDPR missing legal basis guard was activated.',
+  gdpr_special_category_without_exception: 'GDPR special-category exception guard was activated.',
+  gdpr_breach_notification_overdue: 'GDPR breach notification deadline guard was activated.',
 }
 
 const actionLabels: Record<string, string> = {
@@ -40,6 +48,14 @@ const actionLabels: Record<string, string> = {
   consider_cmr: 'Consider CMR as an additional imaging step.',
   perform_cmr: 'Perform cardiac CMR if available.',
   follow_up_if_clinically_indicated: 'Follow up if clinically indicated.',
+  maintain_processing_record: 'Maintain the processing record and evidence of the lawful basis.',
+  suspend_processing: 'Suspend or pause the processing activity until lawfulness is clarified.',
+  document_or_obtain_legal_basis: 'Document or obtain an applicable GDPR legal basis.',
+  dpo_review: 'Escalate the case to the data protection officer or privacy reviewer.',
+  stop_special_category_processing: 'Stop special-category processing until an Article 9 exception is confirmed.',
+  identify_article9_exception: 'Identify and document the applicable Article 9 exception.',
+  notify_supervisory_authority: 'Notify the competent supervisory authority.',
+  document_delay_reasons: 'Document reasons for notification delay.',
 }
 
 const reviewLabels: Record<string, string> = {

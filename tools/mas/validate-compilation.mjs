@@ -6,22 +6,33 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(__dirname, '../..')
 const APPROVED_RULES_DIR = path.join(REPO_ROOT, 'approved/rules')
+const APPROVED_PLANS_DIR = path.join(REPO_ROOT, 'approved/plans')
 const GENERATED_AGENT = path.join(REPO_ROOT, 'agents/case_reasoner_generated.asl')
+const GENERATED_PLANNER = path.join(REPO_ROOT, 'agents/care_planner_generated.asl')
 const APPROVED_RULES_ASL = path.join(REPO_ROOT, 'beliefs/approved_rules.asl')
 const APPROVED_RULE_SOURCES_ASL = path.join(REPO_ROOT, 'beliefs/approved_rule_sources.asl')
+const APPROVED_PLANS_ASL = path.join(REPO_ROOT, 'beliefs/approved_plans.asl')
 
 const failures = []
 
 async function main() {
   const rules = await loadApprovedRules()
+  const plans = await loadApprovedPlans()
   const generated = await readFile(GENERATED_AGENT, 'utf8')
+  const generatedPlanner = await readFile(GENERATED_PLANNER, 'utf8')
   const approvedRules = await readFile(APPROVED_RULES_ASL, 'utf8')
   const approvedSources = await readFile(APPROVED_RULE_SOURCES_ASL, 'utf8')
+  const approvedPlans = await readFile(APPROVED_PLANS_ASL, 'utf8')
 
   for (const rule of rules) {
     validateGeneratedPlan(rule, generated)
     validateApprovedRuleFact(rule, approvedRules)
     validateSourceMapping(rule, approvedSources)
+  }
+
+  for (const plan of plans) {
+    validateGeneratedCarePlan(plan, generatedPlanner)
+    validateApprovedPlanFact(plan, approvedPlans)
   }
 
   validateNoSuspiciousGeneratedPredicates(generated)
@@ -31,7 +42,7 @@ async function main() {
     process.exit(1)
   }
 
-  console.log(`Compilation validation passed: ${rules.length} approved rules`)
+  console.log(`Compilation validation passed: ${rules.length} approved rules, ${plans.length} approved plans`)
 }
 
 async function loadApprovedRules() {
@@ -44,6 +55,18 @@ async function loadApprovedRules() {
   }
 
   return rules
+}
+
+async function loadApprovedPlans() {
+  const files = (await readdir(APPROVED_PLANS_DIR)).filter((file) => file.endsWith('.json')).sort()
+  const plans = []
+
+  for (const file of files) {
+    const plan = JSON.parse(await readFile(path.join(APPROVED_PLANS_DIR, file), 'utf8'))
+    if (plan.approvedForRuntime === true) plans.push(plan)
+  }
+
+  return plans
 }
 
 function validateGeneratedPlan(rule, generated) {
@@ -85,12 +108,46 @@ function validateSourceMapping(rule, approvedSources) {
   if (!approvedSources.includes(expected)) failures.push(`${rule.ruleId}: missing source mapping ${expected}`)
 }
 
+function validateGeneratedCarePlan(plan, generatedPlanner) {
+  const block = extractPlanBlock(plan.planId, generatedPlanner)
+  if (!block) {
+    failures.push(`${plan.planId}: generated care plan block not found`)
+    return
+  }
+
+  const trigger = `decision(Case, ${plan.trigger.decision})`
+  if (!block.includes(trigger)) failures.push(`${plan.planId}: missing trigger ${trigger}`)
+  if (!block.includes(`approved_plan(${plan.planId})`)) failures.push(`${plan.planId}: missing approved_plan gating`)
+
+  const goal = `planning_goal(Case, ${plan.planningGoal})`
+  if (!block.includes(goal)) failures.push(`${plan.planId}: missing planning goal ${goal}`)
+
+  for (const step of plan.nextSteps) {
+    const nextStep = `next_step(Case, ${step})`
+    if (!block.includes(nextStep)) failures.push(`${plan.planId}: missing next step ${nextStep}`)
+  }
+}
+
+function validateApprovedPlanFact(plan, approvedPlans) {
+  if (!approvedPlans.includes(`approved_plan(${plan.planId}).`)) {
+    failures.push(`${plan.planId}: missing approved_plan fact`)
+  }
+}
+
 function extractRuleBlock(ruleId, generated) {
   const marker = `// Rule: ${ruleId}`
   const start = generated.indexOf(marker)
   if (start === -1) return null
   const next = generated.indexOf('\n// Rule:', start + marker.length)
   return next === -1 ? generated.slice(start) : generated.slice(start, next)
+}
+
+function extractPlanBlock(planId, generatedPlanner) {
+  const marker = `// Plan: ${planId}`
+  const start = generatedPlanner.indexOf(marker)
+  if (start === -1) return null
+  const next = generatedPlanner.indexOf('\n// Plan:', start + marker.length)
+  return next === -1 ? generatedPlanner.slice(start) : generatedPlanner.slice(start, next)
 }
 
 function validateNoSuspiciousGeneratedPredicates(generated) {

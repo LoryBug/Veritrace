@@ -1,11 +1,17 @@
-# MAS Rule Compilation Tools
+# MAS Compilation Tools
 
 These tools close the design-time to runtime gap:
 
 ```text
 approved/rules/*.json
 -> standalone JSON/schema validation
--> generated AgentSpeak plans
+-> generated AgentSpeak rule plans
+-> static compilation validation
+-> Jason MAS runtime
+
+approved/plans/*.json
+-> standalone JSON/schema validation
+-> generated AgentSpeak care plans
 -> static compilation validation
 -> Jason MAS runtime
 ```
@@ -24,6 +30,20 @@ This validates every `approved/rules/*.json` artifact before compilation. It che
 - required runtime conclusions: `risk`, `decision`, and `activated_rule`;
 - `activated_rule` and `source_for_rule` consistency with the rule id and source id;
 - safe `missingDataBehavior` values.
+
+## Validate Approved Plan JSON
+
+```powershell
+node tools/mas/validate-approved-plans.mjs
+```
+
+This validates every `approved/plans/*.json` artifact before compilation. It checks:
+
+- approved runtime status: `reviewStatus="approved"` and `approvedForRuntime=true`;
+- source metadata;
+- a symbolic decision trigger;
+- a planning goal and ordered `nextSteps`;
+- `decision(Case, Decision)` and `approved_plan(PlanId)` runtime facts.
 
 ## Compile Approved Rules
 
@@ -45,6 +65,19 @@ The compiler does not trust draft rules. It reads only artifacts with:
   "approvedForRuntime": true
 }
 ```
+
+## Compile Approved Plans
+
+```powershell
+node tools/mas/compile-plans.mjs
+```
+
+This generates:
+
+- `agents/care_planner_generated.asl`
+- `beliefs/approved_plans.asl`
+
+The plan compiler follows the same approval boundary as the rule compiler. It ignores non-approved plan drafts and gates every generated plan with `approved_plan(PlanId)`.
 
 For isolated tests or experiments, the compiler accepts explicit paths:
 
@@ -84,14 +117,19 @@ The validator checks that generated AgentSpeak preserves:
 - `approved_rule(Rule)` gating;
 - `risk`, `decision`, and `activated_rule` conclusions;
 - used evidence emissions;
-- source mappings.
+- source mappings;
+- every approved plan id;
+- every plan decision trigger;
+- `approved_plan(PlanId)` gating;
+- planning goal and next-step emissions.
 
 ## Generated File Strategy
 
-Generated rules are written to a separate file:
+Generated rules and plans are written to separate files:
 
 ```text
 agents/case_reasoner_generated.asl
+agents/care_planner_generated.asl
 ```
 
-`agents/case_reasoner.asl` includes this file and keeps hand-written reusable predicates and helper plans. This keeps generated code reviewable without overwriting hand-written MAS logic.
+`agents/case_reasoner.asl` and `agents/care_planner.asl` include these files and keep hand-written reusable predicates and fallback plans. This keeps generated code reviewable without overwriting hand-written MAS logic.

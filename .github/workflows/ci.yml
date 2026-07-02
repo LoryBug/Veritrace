@@ -45,11 +45,11 @@ jobs:
       - name: Ast-grep lint
         run: npm run lint:ast-grep
 
-      - name: Compile approved rules to AgentSpeak
+      - name: Compile approved rules and plans to AgentSpeak
         run: npm run compile
 
       - name: Ensure generated artifacts are committed
-        run: git diff --exit-code -- agents/case_reasoner_generated.asl beliefs/approved_rules.asl beliefs/approved_rule_sources.asl
+        run: git diff --exit-code -- agents/case_reasoner_generated.asl agents/care_planner_generated.asl beliefs/approved_rules.asl beliefs/approved_rule_sources.asl beliefs/approved_plans.asl
 
       - name: Live Jason MAS golden cases
         run: npm run test:mas

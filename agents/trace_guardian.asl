@@ -6,6 +6,10 @@
 { include("cases/gc00.asl") }
 { include("cases/gc04.asl") }
 { include("cases/gc_gray_zone.asl") }
+{ include("cases/gdpr_lawful_processing.asl") }
+{ include("cases/gdpr_missing_legal_basis.asl") }
+{ include("cases/gdpr_special_category.asl") }
+{ include("cases/gdpr_breach_overdue.asl") }
 
 usable_case_data(Case) :-
     score(Case, Metric, Value).
@@ -18,6 +22,12 @@ usable_case_data(Case) :-
 
 usable_case_data(Case) :-
     pet_positive(Case).
+
+usable_case_data(Case) :-
+    processing(Case).
+
+usable_case_data(Case) :-
+    data_breach(Case).
 
 +!guard_trace(Case)
   <- !record_missing_data(Case);

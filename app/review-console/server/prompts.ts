@@ -21,6 +21,7 @@ Return only valid JSON matching this schema:
 
 Every claim must include an exact quote from the input text.
 Mark every claim as requiring human review.
+For claimType and ruleCandidatePotential choose one concrete value. Never copy the union text with pipes.
 
 Input:
 ${inputJson}`
@@ -36,8 +37,12 @@ If the claim is not operational enough, return a draft with review notes explain
 Missing data must not be treated as negative evidence.
 Conditions and conclusions must be AgentSpeak-compatible fragments, not prose.
 Use Case as the case variable.
-Valid condition examples: score(Case, cmr_mass_score, Score), cutoff(cmr_mass_score, Cutoff), Score >= Cutoff, not usable_case_data(Case).
-Valid conclusion examples: risk(Case, high), decision(Case, cmr_driven_high_suspicion), activated_rule(Case, cmr_mass_score_above_cutoff), requires_human_review(Case, missing_critical_data).
+Use generic, domain-appropriate predicate names from the claim and canonical concepts.
+Valid clinical condition examples: score(Case, cmr_mass_score, Score), cutoff(cmr_mass_score, Cutoff), Score >= Cutoff, not usable_case_data(Case).
+Valid GDPR/compliance condition examples: processing(Case), personal_data(Case), legal_basis(Case, Basis), data_breach(Case), breach_hours_since_awareness(Case, Hours), Hours > 72, not notified_authority(Case).
+Valid conclusion examples: risk(Case, high), risk(Case, low), decision(Case, gdpr_breach_notification_overdue), activated_rule(Case, gdpr_breach_notification_overdue), requires_human_review(Case, missing_legal_basis).
+For ruleType and missingDataBehavior choose one concrete value. Never copy the union text with pipes.
+Return the rule object itself at the top level, not wrapped in candidateRule, rule, data, or result.
 Return only valid JSON matching this schema:
 {
   "ruleId": "string",

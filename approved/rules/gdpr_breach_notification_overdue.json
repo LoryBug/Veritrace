@@ -1,0 +1,49 @@
+{
+  "ruleId": "gdpr_breach_notification_overdue",
+  "domain": "gdpr_compliance",
+  "title": "GDPR personal-data breach notification overdue",
+  "ruleType": "deadline_guard",
+  "reviewStatus": "approved",
+  "approvedForRuntime": true,
+  "reviewedBy": "project_reviewer",
+  "reviewDate": "2026-07-02",
+  "source": {
+    "sourceId": "gdpr_reg_679_2016_art_33",
+    "type": "regulation",
+    "status": "verified_nse",
+    "quote": "In case of a personal data breach, the controller notifies the competent supervisory authority without undue delay and, where feasible, not later than 72 hours after becoming aware of it, unless risk is unlikely."
+  },
+  "conditions": [
+    "data_breach(Case)",
+    "breach_risk(Case, likely)",
+    "breach_hours_since_awareness(Case, Hours)",
+    "Hours > 72",
+    "not notified_authority(Case)"
+  ],
+  "conclusions": [
+    "risk(Case, high)",
+    "decision(Case, gdpr_breach_notification_overdue)",
+    "activated_rule(Case, gdpr_breach_notification_overdue)"
+  ],
+  "usedEvidence": [
+    "data_breach(Case)",
+    "breach_risk(Case, likely)",
+    "breach_hours_since_awareness(Case, Hours)"
+  ],
+  "missingDataBehavior": "require_human_review",
+  "compilation": {
+    "priority": 10
+  },
+  "runtimeImplementation": {
+    "agentFile": "agents/case_reasoner.asl",
+    "activatedRuleFact": "activated_rule(Case, gdpr_breach_notification_overdue)",
+    "sourceMappingFact": "source_for_rule(gdpr_breach_notification_overdue, gdpr_reg_679_2016_art_33)"
+  },
+  "validatedBy": [
+    "expected/traces/gdpr_breach_overdue.expected.json"
+  ],
+  "limitations": [
+    "The rule assumes the case has already encoded breach risk as likely; it does not assess breach severity by itself.",
+    "Late notification may still require documented reasons; this rule flags the overdue condition for review."
+  ]
+}

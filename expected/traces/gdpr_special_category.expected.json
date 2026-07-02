@@ -1,0 +1,21 @@
+{
+  "caseId": "gdpr_special_category",
+  "risk": "high",
+  "decision": "gdpr_special_category_without_exception",
+  "activatedRules": [
+    "gdpr_special_category_without_exception"
+  ],
+  "usedEvidence": [
+    "special_category_data(gdpr_special_category, health)"
+  ],
+  "missingData": [],
+  "sources": [
+    "gdpr_reg_679_2016_art_9"
+  ],
+  "nextSteps": [
+    "stop_special_category_processing",
+    "identify_article9_exception",
+    "dpo_review"
+  ],
+  "humanReview": []
+}

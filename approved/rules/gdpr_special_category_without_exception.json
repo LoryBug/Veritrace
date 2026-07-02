@@ -1,0 +1,45 @@
+{
+  "ruleId": "gdpr_special_category_without_exception",
+  "domain": "gdpr_compliance",
+  "title": "GDPR special-category data without Article 9 exception",
+  "ruleType": "compliance_guard",
+  "reviewStatus": "approved",
+  "approvedForRuntime": true,
+  "reviewedBy": "project_reviewer",
+  "reviewDate": "2026-07-02",
+  "source": {
+    "sourceId": "gdpr_reg_679_2016_art_9",
+    "type": "regulation",
+    "status": "verified_nse",
+    "quote": "Processing special categories of personal data is prohibited unless one of the Article 9 exceptions applies."
+  },
+  "conditions": [
+    "processing(Case)",
+    "special_category_data(Case, Category)",
+    "not article9_exception(Case, Exception)"
+  ],
+  "conclusions": [
+    "risk(Case, high)",
+    "decision(Case, gdpr_special_category_without_exception)",
+    "activated_rule(Case, gdpr_special_category_without_exception)"
+  ],
+  "usedEvidence": [
+    "special_category_data(Case, Category)"
+  ],
+  "missingDataBehavior": "require_human_review",
+  "compilation": {
+    "priority": 10
+  },
+  "runtimeImplementation": {
+    "agentFile": "agents/case_reasoner.asl",
+    "activatedRuleFact": "activated_rule(Case, gdpr_special_category_without_exception)",
+    "sourceMappingFact": "source_for_rule(gdpr_special_category_without_exception, gdpr_reg_679_2016_art_9)"
+  },
+  "validatedBy": [
+    "expected/traces/gdpr_special_category.expected.json"
+  ],
+  "limitations": [
+    "The rule only detects missing encoded Article 9 exceptions; it does not classify every possible special-category scenario.",
+    "Additional national-law conditions may apply and are outside this demo rule."
+  ]
+}

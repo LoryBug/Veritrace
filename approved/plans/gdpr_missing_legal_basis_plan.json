@@ -1,0 +1,38 @@
+{
+  "planId": "gdpr_missing_legal_basis_plan",
+  "domain": "gdpr_compliance",
+  "title": "Restore GDPR lawfulness when legal basis is missing",
+  "reviewStatus": "approved",
+  "approvedForRuntime": true,
+  "reviewedBy": "project_reviewer",
+  "reviewDate": "2026-07-02",
+  "source": {
+    "sourceId": "gdpr_reg_679_2016_art_6",
+    "type": "regulation",
+    "status": "verified_nse",
+    "quote": "The processing is lawful only if and to the extent that at least one listed lawful basis applies."
+  },
+  "trigger": {
+    "decision": "gdpr_missing_legal_basis"
+  },
+  "planningGoal": "restore_lawfulness",
+  "nextSteps": [
+    "suspend_processing",
+    "document_or_obtain_legal_basis",
+    "dpo_review"
+  ],
+  "runtimeImplementation": {
+    "agentFile": "agents/care_planner.asl",
+    "triggerFact": "decision(Case, gdpr_missing_legal_basis)",
+    "approvedPlanFact": "approved_plan(gdpr_missing_legal_basis_plan)"
+  },
+  "validatedBy": [
+    "expected/traces/gdpr_missing_legal_basis.expected.json"
+  ],
+  "limitations": [
+    "The plan assumes a reviewer has confirmed that no legal basis is encoded for the processing activity."
+  ],
+  "compilation": {
+    "priority": 10
+  }
+}

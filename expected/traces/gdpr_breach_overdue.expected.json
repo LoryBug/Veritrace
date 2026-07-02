@@ -1,0 +1,23 @@
+{
+  "caseId": "gdpr_breach_overdue",
+  "risk": "high",
+  "decision": "gdpr_breach_notification_overdue",
+  "activatedRules": [
+    "gdpr_breach_notification_overdue"
+  ],
+  "usedEvidence": [
+    "data_breach(gdpr_breach_overdue)",
+    "breach_risk(gdpr_breach_overdue, likely)",
+    "breach_hours_since_awareness(gdpr_breach_overdue, 96)"
+  ],
+  "missingData": [],
+  "sources": [
+    "gdpr_reg_679_2016_art_33"
+  ],
+  "nextSteps": [
+    "notify_supervisory_authority",
+    "document_delay_reasons",
+    "dpo_review"
+  ],
+  "humanReview": []
+}

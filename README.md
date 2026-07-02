@@ -40,6 +40,8 @@ approved/rules/              Human-approved runtime rule artifacts
   cmr_mass_score_above_cutoff.json
   critical_data_missing.json
   ct_gray_zone_without_pet.json
+approved/plans/              Human-approved runtime plan artifacts
+  gdpr_breach_notification_plan.json
 expected/traces/             JSON trace contracts for golden cases
 tools/
   mas/                        Compiler, validator, MAS runners, tests
@@ -67,7 +69,7 @@ npm install
 cd ../..
 npm test
 
-# Compile approved rules to AgentSpeak
+# Compile approved rules and plans to AgentSpeak
 npm run compile
 
 # Validate generated AgentSpeak
@@ -84,13 +86,14 @@ npm run test:e2e:smoke
 
 | Command | What it does |
 |---|---|
-| `npm test` | All unit tests (rule validation + compiler) |
+| `npm test` | All unit tests and artifact validation |
 | `npm run validate:rules` | Validate approved rule JSON artifacts |
+| `npm run validate:plans` | Validate approved plan JSON artifacts |
 | `npm run validate:compilation` | Validate generated AgentSpeak |
 | `npm run validate:traces` | Validate all generated traces in `output/traces/` |
-| `npm run compile` | Compile approved rules to AgentSpeak |
+| `npm run compile` | Compile approved rules and plans to AgentSpeak |
 | `npm run lint:ast-grep` | Custom ast-grep linting rules |
-| `npm run test:mas` | Live Jason MAS E2E for `gc04`, `gc00`, `gc_gray_zone` |
+| `npm run test:mas` | Live Jason MAS E2E for cardiac and GDPR golden cases |
 | `npm run test:e2e:smoke` | Non-LLM Playwright smoke tests: promote-rule API, custom facts, Jason runtime |
 | `npm run test:e2e` | Full Playwright review-console E2E, including real LLM calls when configured |
 
@@ -114,12 +117,26 @@ Main review-console flows:
 - review predicate mappings and raw AgentSpeak-compatible fragments;
 - approve, reject, or mark the candidate rule as needing revision;
 - promote an approved reviewed rule into `approved/rules/`;
-- compile and validate approved runtime rules;
+- compile and validate approved runtime rules and plans;
 - enter custom case facts through the generic fact editor or guided predicate builder;
 - run Jason live and inspect the structured trace;
 - verbalize a trace with a constrained LLM prompt.
 
 If a promoted runtime artifact already exists, the UI asks before overwriting it. Promotion writes the approved JSON artifact, recompiles AgentSpeak, validates the generated runtime files, and rolls back the artifact if compilation fails.
+
+## Approved Plan Pipeline
+
+Rules decide what symbolic conclusion applies. Plans decide what next steps the MAS should emit after that conclusion.
+
+The current framework keeps both layers human-reviewed:
+
+- candidate rules become `approved/rules/*.json` only after review;
+- approved rules compile into `agents/case_reasoner_generated.asl` and rule metadata beliefs;
+- approved plans live in `approved/plans/*.json`;
+- approved plans compile into `agents/care_planner_generated.asl` and `beliefs/approved_plans.asl`;
+- Jason executes only generated rule and plan artifacts gated by `approved_rule(...)` and `approved_plan(...)` facts.
+
+This keeps the LLM role controlled: it may draft candidate rules or candidate plans, but runtime behavior must come from approved symbolic artifacts.
 
 ## Trace Pipeline
 
@@ -198,7 +215,7 @@ GitHub Actions runs on every push and pull request:
 
 LLM-backed Playwright tests are intentionally not required in CI unless a separate secret-gated job is added.
 
-## Case Study
+## Case Studies
 
 The cardiac mass domain demonstrates the framework with three golden cases:
 
@@ -206,12 +223,20 @@ The cardiac mass domain demonstrates the framework with three golden cases:
 - **GC-04** — CMR score ≥ 5 → `risk: high`, source-grounded rule activation
 - **GC-GRAY-ZONE** — CT gray zone without PET → `risk: mid`, intermediate uncertainty
 
+The GDPR compliance benchmark demonstrates cross-domain generalization with verified `Reg. 679/2016` sources:
+
+- **GDPR lawful processing** — documented legal basis and transparency facts → `risk: low`
+- **GDPR missing legal basis** — personal-data processing without encoded lawful basis → `risk: high`
+- **GDPR special category** — special-category data without encoded Article 9 exception → `risk: high`
+- **GDPR breach overdue** — likely-risk breach known for more than 72 hours without authority notification → `risk: high`
+
 ## Academic Positioning
 
 - Primary reference: **Logic-LM** (Pan et al., EMNLP 2023) — LLM-to-symbolic-solver separation
 - Runtime: **Jason/AgentSpeak** BDI multi-agent system
 - LLM role: controlled — draft authoring at design time, trace verbalization at runtime
 - Human role: mandatory approval gate between candidate and runtime rules
+- Planning extension: GDPR next-step plans are compiled from approved plan artifacts, motivated by the professor-recommended planning paper; deeper LLM-assisted plan synthesis remains future work rather than an autonomous runtime planner.
 
 > This is not an LLM making decisions. This is a symbolic MAS executing human-approved rules, with LLM assistance only for drafting and verbalization.
 

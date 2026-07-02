@@ -1,0 +1,38 @@
+{
+  "planId": "gdpr_breach_notification_plan",
+  "domain": "gdpr_compliance",
+  "title": "Restore GDPR breach notification compliance",
+  "reviewStatus": "approved",
+  "approvedForRuntime": true,
+  "reviewedBy": "project_reviewer",
+  "reviewDate": "2026-07-02",
+  "source": {
+    "sourceId": "gdpr_reg_679_2016_art_33",
+    "type": "regulation",
+    "status": "verified_nse",
+    "quote": "The controller notifies the competent supervisory authority without undue delay and, where feasible, not later than 72 hours after becoming aware of a personal data breach."
+  },
+  "trigger": {
+    "decision": "gdpr_breach_notification_overdue"
+  },
+  "planningGoal": "restore_breach_notification_compliance",
+  "nextSteps": [
+    "notify_supervisory_authority",
+    "document_delay_reasons",
+    "dpo_review"
+  ],
+  "runtimeImplementation": {
+    "agentFile": "agents/care_planner.asl",
+    "triggerFact": "decision(Case, gdpr_breach_notification_overdue)",
+    "approvedPlanFact": "approved_plan(gdpr_breach_notification_plan)"
+  },
+  "validatedBy": [
+    "expected/traces/gdpr_breach_overdue.expected.json"
+  ],
+  "limitations": [
+    "The plan flags notification and delay documentation; it does not determine supervisory authority jurisdiction."
+  ],
+  "compilation": {
+    "priority": 10
+  }
+}

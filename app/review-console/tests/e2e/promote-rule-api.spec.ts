@@ -30,7 +30,7 @@ test('promotes an approved reviewed rule through the API', async ({ request }) =
     },
   })
 
-  expect(response.ok()).toBeTruthy()
+  expect(response.ok(), await response.text()).toBeTruthy()
   const body = await response.json()
   expect(body.artifactPath).toBe(`approved/rules/${promotedRuleId}.json`)
   expect(body.compilation.generatedFiles).toContain('agents/case_reasoner_generated.asl')

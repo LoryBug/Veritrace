@@ -2,6 +2,7 @@
 // Owns BDI-style next-step planning from symbolic runtime conclusions.
 
 { include("beliefs/clinical_actions.asl") }
+{ include("beliefs/approved_plans.asl") }
 
 +!plan_case(Case)
   : decision(Case, insufficient_data)
@@ -15,6 +16,9 @@
      .send(runtime_coordinator, tell, next_step(Case, perform_pet_ct));
      .send(runtime_coordinator, tell, next_step(Case, consider_cmr));
      .send(runtime_coordinator, tell, planner_done(Case)).
+
+// Approved plan artifacts are generated from approved/plans/*.json.
+{ include("agents/care_planner_generated.asl") }
 
 +!plan_case(Case)
   : risk(Case, high)

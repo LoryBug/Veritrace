@@ -114,7 +114,7 @@ app.post('/api/draft-rule', async (request, response) => {
       },
     })
     const raw = await completeJson(ruleDraftingPrompt(JSON.stringify(input, null, 2)))
-    const parsed = CandidateRuleSchema.parse(raw)
+    const parsed = CandidateRuleSchema.parse(unwrapCandidateRule(raw))
     await recordAuditEvent({
       eventType: 'llm.rule_drafting.completed',
       actor: 'llm',
@@ -176,19 +176,23 @@ app.post('/api/compile-rules', async (_request, response) => {
       details: {},
     })
 
-    const compileScript = path.join(repoRoot, 'tools/mas/compile-rules.mjs')
+    const compileRulesScript = path.join(repoRoot, 'tools/mas/compile-rules.mjs')
+    const compilePlansScript = path.join(repoRoot, 'tools/mas/compile-plans.mjs')
     const validateScript = path.join(repoRoot, 'tools/mas/validate-compilation.mjs')
-    const compile = await execFileAsync(process.execPath, [compileScript], { cwd: repoRoot })
+    const compileRules = await execFileAsync(process.execPath, [compileRulesScript], { cwd: repoRoot })
+    const compilePlans = await execFileAsync(process.execPath, [compilePlansScript], { cwd: repoRoot })
     const validate = await execFileAsync(process.execPath, [validateScript], { cwd: repoRoot })
 
     const result = {
       generatedFiles: [
         'agents/case_reasoner_generated.asl',
+        'agents/care_planner_generated.asl',
         'beliefs/approved_rules.asl',
         'beliefs/approved_rule_sources.asl',
+        'beliefs/approved_plans.asl',
       ],
-      stdout: `${compile.stdout}${validate.stdout}`.trim(),
-      stderr: `${compile.stderr}${validate.stderr}`.trim(),
+      stdout: `${compileRules.stdout}${compilePlans.stdout}${validate.stdout}`.trim(),
+      stderr: `${compileRules.stderr}${compilePlans.stderr}${validate.stderr}`.trim(),
     }
 
     await recordAuditEvent({
@@ -422,19 +426,23 @@ app.post('/api/verbalize-trace', async (request, response) => {
 })
 
 async function compileAndValidateRules() {
-  const compileScript = path.join(repoRoot, 'tools/mas/compile-rules.mjs')
+  const compileRulesScript = path.join(repoRoot, 'tools/mas/compile-rules.mjs')
+  const compilePlansScript = path.join(repoRoot, 'tools/mas/compile-plans.mjs')
   const validateScript = path.join(repoRoot, 'tools/mas/validate-compilation.mjs')
-  const compile = await execFileAsync(process.execPath, [compileScript], { cwd: repoRoot })
+  const compileRules = await execFileAsync(process.execPath, [compileRulesScript], { cwd: repoRoot })
+  const compilePlans = await execFileAsync(process.execPath, [compilePlansScript], { cwd: repoRoot })
   const validate = await execFileAsync(process.execPath, [validateScript], { cwd: repoRoot })
 
   return {
     generatedFiles: [
       'agents/case_reasoner_generated.asl',
+      'agents/care_planner_generated.asl',
       'beliefs/approved_rules.asl',
       'beliefs/approved_rule_sources.asl',
+      'beliefs/approved_plans.asl',
     ],
-    stdout: `${compile.stdout}${validate.stdout}`.trim(),
-    stderr: `${compile.stderr}${validate.stderr}`.trim(),
+    stdout: `${compileRules.stdout}${compilePlans.stdout}${validate.stdout}`.trim(),
+    stderr: `${compileRules.stderr}${compilePlans.stderr}${validate.stderr}`.trim(),
   }
 }
 
@@ -460,6 +468,16 @@ async function restoreArtifact(filePath: string, previousArtifact: string | null
   }
 
   await writeFile(filePath, previousArtifact, 'utf8')
+}
+
+function unwrapCandidateRule(raw: unknown) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return raw
+  const object = raw as Record<string, unknown>
+  for (const key of ['candidateRule', 'rule', 'draftRule', 'result', 'data']) {
+    const nested = object[key]
+    if (nested && typeof nested === 'object' && !Array.isArray(nested)) return nested
+  }
+  return raw
 }
 
 async function exists(filePath: string) {

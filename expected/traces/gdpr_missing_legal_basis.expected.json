@@ -1,0 +1,22 @@
+{
+  "caseId": "gdpr_missing_legal_basis",
+  "risk": "high",
+  "decision": "gdpr_missing_legal_basis",
+  "activatedRules": [
+    "gdpr_missing_legal_basis"
+  ],
+  "usedEvidence": [
+    "processing(gdpr_missing_legal_basis)",
+    "personal_data(gdpr_missing_legal_basis)"
+  ],
+  "missingData": [],
+  "sources": [
+    "gdpr_reg_679_2016_art_6"
+  ],
+  "nextSteps": [
+    "suspend_processing",
+    "document_or_obtain_legal_basis",
+    "dpo_review"
+  ],
+  "humanReview": []
+}

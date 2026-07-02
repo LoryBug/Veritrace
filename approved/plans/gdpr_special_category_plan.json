@@ -1,0 +1,38 @@
+{
+  "planId": "gdpr_special_category_plan",
+  "domain": "gdpr_compliance",
+  "title": "Restore Article 9 compliance for special-category data",
+  "reviewStatus": "approved",
+  "approvedForRuntime": true,
+  "reviewedBy": "project_reviewer",
+  "reviewDate": "2026-07-02",
+  "source": {
+    "sourceId": "gdpr_reg_679_2016_art_9",
+    "type": "regulation",
+    "status": "verified_nse",
+    "quote": "Processing special categories of personal data is prohibited unless one of the Article 9 exceptions applies."
+  },
+  "trigger": {
+    "decision": "gdpr_special_category_without_exception"
+  },
+  "planningGoal": "restore_special_category_compliance",
+  "nextSteps": [
+    "stop_special_category_processing",
+    "identify_article9_exception",
+    "dpo_review"
+  ],
+  "runtimeImplementation": {
+    "agentFile": "agents/care_planner.asl",
+    "triggerFact": "decision(Case, gdpr_special_category_without_exception)",
+    "approvedPlanFact": "approved_plan(gdpr_special_category_plan)"
+  },
+  "validatedBy": [
+    "expected/traces/gdpr_special_category.expected.json"
+  ],
+  "limitations": [
+    "The plan does not choose an Article 9 exception; it escalates the need to identify and document one."
+  ],
+  "compilation": {
+    "priority": 10
+  }
+}

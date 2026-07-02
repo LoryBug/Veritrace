@@ -16,6 +16,10 @@ const cases = [
   { name: 'gc04', expectedFile: 'gc04.expected.json' },
   { name: 'gc00', expectedFile: 'gc00.expected.json' },
   { name: 'gc_gray_zone', expectedFile: 'gc_gray_zone.expected.json' },
+  { name: 'gdpr_lawful_processing', expectedFile: 'gdpr_lawful_processing.expected.json' },
+  { name: 'gdpr_missing_legal_basis', expectedFile: 'gdpr_missing_legal_basis.expected.json' },
+  { name: 'gdpr_special_category', expectedFile: 'gdpr_special_category.expected.json' },
+  { name: 'gdpr_breach_overdue', expectedFile: 'gdpr_breach_overdue.expected.json' },
 ]
 
 const runtimeClasspath = await resolveRuntimeClasspath()

@@ -1,0 +1,36 @@
+{
+  "planId": "gdpr_lawful_processing_plan",
+  "domain": "gdpr_compliance",
+  "title": "Maintain GDPR accountability record",
+  "reviewStatus": "approved",
+  "approvedForRuntime": true,
+  "reviewedBy": "project_reviewer",
+  "reviewDate": "2026-07-02",
+  "source": {
+    "sourceId": "gdpr_reg_679_2016_art_6",
+    "type": "regulation",
+    "status": "verified_nse",
+    "quote": "Processing is lawful only if and to the extent that at least one lawful condition applies."
+  },
+  "trigger": {
+    "decision": "gdpr_lawful_processing_documented"
+  },
+  "planningGoal": "maintain_accountability",
+  "nextSteps": [
+    "maintain_processing_record"
+  ],
+  "runtimeImplementation": {
+    "agentFile": "agents/care_planner.asl",
+    "triggerFact": "decision(Case, gdpr_lawful_processing_documented)",
+    "approvedPlanFact": "approved_plan(gdpr_lawful_processing_plan)"
+  },
+  "validatedBy": [
+    "expected/traces/gdpr_lawful_processing.expected.json"
+  ],
+  "limitations": [
+    "This plan records accountability maintenance only; it is not a complete privacy governance workflow."
+  ],
+  "compilation": {
+    "priority": 20
+  }
+}

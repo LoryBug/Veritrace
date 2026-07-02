@@ -1,0 +1,21 @@
+{
+  "caseId": "gdpr_lawful_processing",
+  "risk": "low",
+  "decision": "gdpr_lawful_processing_documented",
+  "activatedRules": [
+    "gdpr_lawful_processing_documented"
+  ],
+  "usedEvidence": [
+    "legal_basis(gdpr_lawful_processing, consent)",
+    "purpose_specified(gdpr_lawful_processing)",
+    "transparency_notice(gdpr_lawful_processing)"
+  ],
+  "missingData": [],
+  "sources": [
+    "gdpr_reg_679_2016_art_6"
+  ],
+  "nextSteps": [
+    "maintain_processing_record"
+  ],
+  "humanReview": []
+}
